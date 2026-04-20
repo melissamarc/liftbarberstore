@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useResponsive } from "../hooks/useResponsive";
-import api, { getImageUrl } from "../services/api";
+import { getImageUrl } from "../services/api";
 
 function DashboardLayout({ children }) {
   const { logout, usuario } = useAuth();
@@ -9,7 +9,8 @@ function DashboardLayout({ children }) {
   const location = useLocation();
   const { isMobile, isTablet } = useResponsive();
 
- const urlFoto = getImageUrl(item.foto_perfil);
+ const urlFoto = getImageUrl(usuario.foto_perfil);
+ 
 
   function handleLogout() {
     logout();

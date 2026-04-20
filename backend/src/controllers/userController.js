@@ -89,7 +89,6 @@ async function buscarPerfil(req, res) {
   }
 }
 
-// UPLOAD FOTO DE PERFIL
 async function uploadFotoPerfil(req, res) {
   try {
     const usuarioId = req.usuario.id;
@@ -100,7 +99,7 @@ async function uploadFotoPerfil(req, res) {
       });
     }
 
-    const caminhoArquivo = `/uploads/${req.file.filename}`;
+    const caminhoArquivo = `/uploads/perfis/${req.file.filename}`;
 
     await pool.query(
       `

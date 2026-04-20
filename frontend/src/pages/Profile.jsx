@@ -31,52 +31,52 @@ function Profile() {
   }, []);
 
   async function handleUpload(e) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!arquivo) {
-      setErro("Selecione uma imagem.");
-      return;
-    }
-
-    try {
-      setEnviando(true);
-      setErro("");
-      setMensagem("");
-
-      const formData = new FormData();
-      formData.append("foto", arquivo);
-
-      const response = await api.post("/users/me/foto", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const novaFoto = response.data.foto_perfil;
-
-      const usuarioAtualizado = {
-        ...usuario,
-        foto_perfil: novaFoto,
-      };
-
-      login(usuarioAtualizado, localStorage.getItem("token"));
-
-      setMensagem("Foto atualizada com sucesso.");
-      setArquivo(null);
-
-      await carregarPerfil();
-    } catch (error) {
-      setErro(error.response?.data?.message || "Erro ao enviar foto.");
-    } finally {
-      setEnviando(false);
-    }
+  if (!arquivo) {
+    setErro("Selecione uma imagem.");
+    return;
   }
+
+  try {
+    setEnviando(true);
+    setErro("");
+    setMensagem("");
+
+    const formData = new FormData();
+    formData.append("foto", arquivo);
+
+    const response = await api.post("/users/me/foto", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    const novaFoto = response.data.foto_perfil;
+
+    const usuarioAtualizado = {
+      ...usuario,
+      foto_perfil: novaFoto,
+    };
+
+    login(usuarioAtualizado, localStorage.getItem("token"));
+
+    setMensagem("Foto atualizada com sucesso.");
+    setArquivo(null);
+
+    await carregarPerfil();
+  } catch (error) {
+    setErro(error.response?.data?.message || "Erro ao enviar foto.");
+  } finally {
+    setEnviando(false);
+  }
+}
 
   if (loading) {
     return <p>Carregando perfil...</p>;
   }
 
-   const urlFoto = getImageUrl(item.foto_perfil);
+   const urlFoto = getImageUrl(perfil?.foto_perfil);
 
   return (
     <div style={styles.page}>
