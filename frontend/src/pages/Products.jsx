@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import api from "../services/api";
+import api, { getImageUrl } from "../services/api";
+import { useResponsive } from "../hooks/useResponsive";
 
 function Products() {
   const [produtos, setProdutos] = useState([]);
@@ -18,6 +19,8 @@ function Products() {
   const [editAtivo, setEditAtivo] = useState(true);
   const [editFoto, setEditFoto] = useState(null);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
+  const { isMobile, isTablet } = useResponsive();
 
   useEffect(() => {
     carregarProdutos();
@@ -130,7 +133,7 @@ function Products() {
       <header style={styles.pageHeader}>
         <div>
           <p style={styles.pageMini}>Catálogo</p>
-          <h1 style={styles.pageTitle}>Produtos</h1>
+          <h1 style={styles.pageTitle(isMobile)}>Produtos</h1>
           <p style={styles.pageSubtitle}>
             Cadastre, pesquise e atualize os produtos da loja.
           </p>
@@ -139,18 +142,21 @@ function Products() {
 
       {erro && <p style={styles.erro}>{erro}</p>}
 
-      <section style={styles.board}>
-        <aside style={styles.sidebar}>
+      <section
+        style={styles.board(
+          isMobile ? "1fr" : isTablet ? "1fr" : "300px 1fr",
+          isMobile
+        )}
+      >
+        <aside style={styles.sidebar(isMobile)}>
           <div style={styles.sidebarBlock}>
             <p style={styles.sidebarMini}>Resumo</p>
             <h3 style={styles.sidebarTitle}>{produtos.length} produtos</h3>
-            <p style={styles.sidebarText}>
-              exibidos na listagem atual.
-            </p>
+            <p style={styles.sidebarText}>exibidos na listagem atual.</p>
           </div>
 
           <div style={styles.sidebarBlock}>
-            <div style={styles.blockHeader}>
+            <div style={styles.blockHeader(isMobile)}>
               <h3 style={styles.blockTitle}>Cadastrar produto</h3>
               <span style={styles.badge}>Admin</span>
             </div>
@@ -202,9 +208,9 @@ function Products() {
           </div>
         </aside>
 
-        <div style={styles.content}>
+        <div style={styles.content(isMobile)}>
           <div style={styles.toolbar}>
-            <form onSubmit={handleBuscar} style={styles.searchForm}>
+            <form onSubmit={handleBuscar} style={styles.searchForm(isMobile)}>
               <span style={styles.searchIcon}>⌕</span>
               <input
                 type="text"
@@ -213,13 +219,13 @@ function Products() {
                 onChange={(e) => setBusca(e.target.value)}
                 style={styles.searchInput}
               />
-              <button type="submit" style={styles.searchButton}>
+              <button type="submit" style={styles.searchButton(isMobile)}>
                 Buscar
               </button>
             </form>
           </div>
 
-          <div style={styles.productsViewport}>
+          <div style={styles.productsViewport(isMobile)}>
             {loading ? (
               <p style={styles.loadingText}>Carregando produtos...</p>
             ) : produtos.length === 0 ? (
@@ -230,11 +236,13 @@ function Products() {
                 </p>
               </div>
             ) : (
-              <div style={styles.grid}>
+              <div
+                style={styles.grid(
+                  isMobile ? "1fr" : isTablet ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))"
+                )}
+              >
                 {produtos.map((produto) => {
-                  const fotoUrl = produto.foto_produto
-                    ? `http://localhost:3001${produto.foto_produto}`
-                    : null;
+                  const fotoUrl = getImageUrl(produto.foto_produto);
 
                   return (
                     <div key={produto.id} style={styles.productCard}>
@@ -269,7 +277,7 @@ function Products() {
                           <p style={styles.productCategory}>Produto da loja</p>
                         </div>
 
-                        <div style={styles.productFooter}>
+                        <div style={styles.productFooter(isMobile)}>
                           <div>
                             <p style={styles.priceLabel}>Preço</p>
                             <p style={styles.productPrice}>
@@ -279,7 +287,7 @@ function Products() {
 
                           <button
                             onClick={() => abrirEdicao(produto)}
-                            style={styles.editButton}
+                            style={styles.editButton(isMobile)}
                           >
                             Editar
                           </button>
@@ -296,7 +304,7 @@ function Products() {
 
       {produtoEditando && (
         <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
+          <div style={styles.modal(isMobile)}>
             <h2 style={styles.modalTitle}>Editar produto</h2>
 
             <div style={styles.modalForm}>
@@ -343,7 +351,7 @@ function Products() {
               </div>
             </div>
 
-            <div style={styles.modalActions}>
+            <div style={styles.modalActions(isMobile)}>
               <button onClick={fecharEdicao} style={styles.cancelButton}>
                 Cancelar
               </button>
@@ -383,12 +391,12 @@ const styles = {
     color: "#7b7b7b",
     fontWeight: 700,
   },
-  pageTitle: {
-    fontSize: "34px",
+  pageTitle: (isMobile) => ({
+    fontSize: isMobile ? "28px" : "34px",
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
-  },
+  }),
   pageSubtitle: {
     color: "#666",
     fontSize: "15px",
@@ -397,22 +405,21 @@ const styles = {
     color: "#b00020",
     fontWeight: 600,
   },
-  board: {
+  board: (columns, isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "300px 1fr",
+    gridTemplateColumns: columns,
     gap: "20px",
     alignItems: "stretch",
-    height: "calc(100vh - 230px)",
-    minHeight: "620px",
-    maxHeight: "620px",
-  },
-  sidebar: {
+    height: isMobile ? "auto" : "calc(100vh - 230px)",
+    minHeight: isMobile ? "auto" : "620px",
+    maxHeight: isMobile ? "none" : "620px",
+  }),
+  sidebar: (isMobile) => ({
     display: "flex",
     flexDirection: "column",
     gap: "18px",
-    height: "100%",
-    overflow: "hidden",
-  },
+    height: isMobile ? "auto" : "100%",
+  }),
   sidebarBlock: {
     background: "#ffffff",
     borderRadius: "24px",
@@ -440,13 +447,14 @@ const styles = {
     fontSize: "14px",
     lineHeight: 1.6,
   },
-  blockHeader: {
+  blockHeader: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
+    flexDirection: isMobile ? "column" : "row",
     gap: "10px",
     marginBottom: "18px",
-  },
+  }),
   blockTitle: {
     fontSize: "20px",
     fontWeight: 800,
@@ -504,7 +512,7 @@ const styles = {
     cursor: "pointer",
     boxShadow: "0 12px 24px rgba(201,31,40,0.18)",
   },
-  content: {
+  content: (isMobile) => ({
     background: "#ffffff",
     borderRadius: "24px",
     padding: "22px",
@@ -512,24 +520,24 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
-    height: "100%",
+    height: isMobile ? "auto" : "100%",
     overflow: "hidden",
-  },
+  }),
   toolbar: {
     marginBottom: "18px",
     flexShrink: 0,
   },
-  searchForm: {
-    height: "58px",
+  searchForm: (isMobile) => ({
+    minHeight: isMobile ? "auto" : "58px",
     background: "#f5f2ec",
     borderRadius: "18px",
     display: "grid",
-    gridTemplateColumns: "24px 1fr auto",
+    gridTemplateColumns: isMobile ? "24px 1fr" : "24px 1fr auto",
     alignItems: "center",
     gap: "12px",
-    padding: "0 14px",
+    padding: isMobile ? "14px" : "0 14px",
     border: "1px solid #ece5da",
-  },
+  }),
   searchIcon: {
     fontSize: "18px",
     color: "#7b7b7b",
@@ -537,13 +545,14 @@ const styles = {
   },
   searchInput: {
     height: "100%",
+    minHeight: "42px",
     border: "none",
     outline: "none",
     background: "transparent",
     fontSize: "15px",
     color: "#111",
   },
-  searchButton: {
+  searchButton: (isMobile) => ({
     height: "42px",
     padding: "0 18px",
     borderRadius: "12px",
@@ -552,13 +561,15 @@ const styles = {
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
-  },
-  productsViewport: {
-    flex: 1,
+    gridColumn: isMobile ? "1 / -1" : "auto",
+    width: isMobile ? "100%" : "auto",
+  }),
+  productsViewport: (isMobile) => ({
+    flex: isMobile ? "unset" : 1,
     minHeight: 0,
-    overflowY: "auto",
-    paddingRight: "4px",
-  },
+    overflowY: isMobile ? "visible" : "auto",
+    paddingRight: isMobile ? "0" : "4px",
+  }),
   loadingText: {
     color: "#666",
     fontSize: "14px",
@@ -579,11 +590,11 @@ const styles = {
     color: "#666",
     fontSize: "14px",
   },
-  grid: {
+  grid: (columns) => ({
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns: columns,
     gap: "18px",
-  },
+  }),
   productCard: {
     background: "#f8f6f2",
     borderRadius: "22px",
@@ -646,12 +657,13 @@ const styles = {
     fontSize: "13px",
     fontWeight: 600,
   },
-  productFooter: {
+  productFooter: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: isMobile ? "stretch" : "flex-end",
     gap: "12px",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   priceLabel: {
     fontSize: "12px",
     textTransform: "uppercase",
@@ -666,7 +678,7 @@ const styles = {
     color: "#111",
     letterSpacing: "-0.04em",
   },
-  editButton: {
+  editButton: (isMobile) => ({
     height: "44px",
     padding: "0 18px",
     borderRadius: "999px",
@@ -676,7 +688,8 @@ const styles = {
     fontWeight: 700,
     cursor: "pointer",
     whiteSpace: "nowrap",
-  },
+    width: isMobile ? "100%" : "auto",
+  }),
   modalOverlay: {
     position: "fixed",
     inset: 0,
@@ -687,14 +700,14 @@ const styles = {
     padding: "20px",
     zIndex: 1000,
   },
-  modal: {
+  modal: (isMobile) => ({
     width: "100%",
     maxWidth: "560px",
     background: "#fff",
     borderRadius: "24px",
-    padding: "24px",
+    padding: isMobile ? "18px" : "24px",
     boxShadow: "0 24px 60px rgba(0,0,0,0.22)",
-  },
+  }),
   modalTitle: {
     fontSize: "24px",
     fontWeight: 800,
@@ -713,12 +726,13 @@ const styles = {
     fontSize: "14px",
     color: "#333",
   },
-  modalActions: {
+  modalActions: (isMobile) => ({
     display: "flex",
     justifyContent: "flex-end",
     gap: "10px",
     marginTop: "20px",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   cancelButton: {
     height: "50px",
     padding: "0 18px",

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../services/api";
+import api, { getImageUrl } from "../services/api";
 
 function NewManualSale() {
   const [produtos, setProdutos] = useState([]);
@@ -222,9 +222,8 @@ function NewManualSale() {
             ) : (
               <div style={styles.itemsList}>
                 {itensVenda.map((item) => {
-                  const fotoUrl = item.foto_produto
-                    ? `http://localhost:3001${item.foto_produto}`
-                    : null;
+                  const fotoUrl = getImageUrl(item.foto_produto);
+                    
 
                   return (
                     <div key={item.produto_id} style={styles.itemCard}>

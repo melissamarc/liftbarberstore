@@ -3,7 +3,7 @@ const path = require("path");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/");
+    cb(null, path.resolve(__dirname, "../../uploads/perfis"));
   },
   filename: function (req, file, cb) {
     const extensao = path.extname(file.originalname);
@@ -26,7 +26,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 2 * 1024 * 1024, // 2MB
+    fileSize: 2 * 1024 * 1024,
   },
 });
 

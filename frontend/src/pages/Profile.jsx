@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import api, { getImageUrl } from "../services/api";
 
 function Profile() {
   const [perfil, setPerfil] = useState(null);
@@ -76,9 +77,7 @@ function Profile() {
     return <p>Carregando perfil...</p>;
   }
 
-  const urlFoto = perfil?.foto_perfil
-    ? `http://localhost:3001${perfil.foto_perfil}`
-    : null;
+   const urlFoto = getImageUrl(item.foto_perfil);
 
   return (
     <div style={styles.page}>

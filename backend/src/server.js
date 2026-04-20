@@ -2,8 +2,11 @@ require("dotenv").config();
 
 const app = require("./app");
 const pool = require("./config/db");
+const ensureUploadDirs = require("./utils/ensureUploadDirs");
 
 const PORT = process.env.PORT || 3001;
+
+ensureUploadDirs();
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

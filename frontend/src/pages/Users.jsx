@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../services/api";
+import api, { getImageUrl } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
 function Users() {
@@ -122,10 +122,7 @@ function Users() {
             ) : (
               <div style={styles.cardsGrid}>
                 {usuariosFiltrados.map((item) => {
-                  const fotoUrl = item.foto_perfil
-                    ? `http://localhost:3001${item.foto_perfil}`
-                    : null;
-
+                  const fotoUrl = getImageUrl(item.foto_perfil);
                   return (
                     <div key={item.id} style={styles.userCard}>
                       <div style={styles.userCardTop}>

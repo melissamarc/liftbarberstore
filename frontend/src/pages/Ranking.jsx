@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../services/api";
+import api, {getImageUrl} from "../services/api";
 
 function Ranking() {
   const [ranking, setRanking] = useState([]);
@@ -59,9 +59,7 @@ function Ranking() {
 
       <section style={styles.topSection}>
         {top3.map((item, index) => {
-          const fotoUrl = item.foto_perfil
-            ? `http://localhost:3001${item.foto_perfil}`
-            : null;
+          const fotoUrl = getImageUrl(item.foto_perfil);
 
           const medalStyle =
             index === 0

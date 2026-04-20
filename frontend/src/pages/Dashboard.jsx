@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import { useResponsive } from "../hooks/useResponsive";
+import api, { getImageUrl } from "../services/api";
 
 function Dashboard() {
   const [resumo, setResumo] = useState(null);
@@ -10,6 +12,7 @@ function Dashboard() {
   const [erro, setErro] = useState("");
 
   const { usuario } = useAuth();
+  const { isMobile, isTablet } = useResponsive();
 
   useEffect(() => {
     async function carregarDashboard() {
@@ -47,10 +50,10 @@ function Dashboard() {
 
   return (
     <div style={styles.page}>
-      <header style={styles.topBar}>
+      <header style={styles.topBar(isMobile)}>
         <div>
           <p style={styles.greetingMini}>Painel principal</p>
-          <h1 style={styles.greetingTitle}>
+          <h1 style={styles.greetingTitle(isMobile)}>
             Olá, {usuario?.nome?.split(" ")[0] || "Usuário"}!
           </h1>
           <p style={styles.greetingText}>
@@ -58,14 +61,19 @@ function Dashboard() {
           </p>
         </div>
 
-        <div style={styles.searchBox}>
+        <div style={styles.searchBox(isMobile)}>
           <span style={styles.searchIcon}>⌕</span>
           <span style={styles.searchText}>Seu sistema está online</span>
         </div>
       </header>
 
-      <section style={styles.dashboardBoard}>
-        <div style={styles.leftColumn}>
+      <section
+        style={styles.dashboardBoard(
+          isMobile ? "1fr" : isTablet ? "1fr" : "1.3fr 0.85fr",
+          isMobile
+        )}
+      >
+        <div style={styles.leftColumn(isMobile)}>
           <div style={styles.highlightCard}>
             <div style={styles.highlightHeader}>
               <div>
@@ -75,7 +83,7 @@ function Dashboard() {
             </div>
 
             <div style={styles.metricsList}>
-              <div style={styles.metricRow}>
+              <div style={styles.metricRow(isMobile)}>
                 <div>
                   <p style={styles.metricLabel}>Total vendido hoje</p>
                   <strong style={styles.metricValue}>
@@ -85,7 +93,7 @@ function Dashboard() {
                 <span style={styles.metricTagRed}>Hoje</span>
               </div>
 
-              <div style={styles.metricRow}>
+              <div style={styles.metricRow(isMobile)}>
                 <div>
                   <p style={styles.metricLabel}>Quantidade de vendas hoje</p>
                   <strong style={styles.metricValue}>
@@ -95,7 +103,7 @@ function Dashboard() {
                 <span style={styles.metricTagDark}>Dia</span>
               </div>
 
-              <div style={styles.metricRow}>
+              <div style={styles.metricRow(isMobile)}>
                 <div>
                   <p style={styles.metricLabel}>Total vendido na semana</p>
                   <strong style={styles.metricValue}>
@@ -105,7 +113,7 @@ function Dashboard() {
                 <span style={styles.metricTagYellow}>Semana</span>
               </div>
 
-              <div style={styles.metricRow}>
+              <div style={styles.metricRow(isMobile)}>
                 <div>
                   <p style={styles.metricLabel}>Quantidade de vendas na semana</p>
                   <strong style={styles.metricValue}>
@@ -117,7 +125,11 @@ function Dashboard() {
             </div>
           </div>
 
-          <div style={styles.bottomRow}>
+          <div
+            style={styles.bottomRow(
+              isMobile ? "1fr" : isTablet ? "1fr" : "0.8fr 1.2fr"
+            )}
+          >
             <div style={styles.smallCard}>
               <div style={styles.smallCardTop}>
                 <div>
@@ -130,9 +142,7 @@ function Dashboard() {
                 {resumo?.quantidade_vendas_hoje || 0}
               </div>
 
-              <p style={styles.metricText}>
-                vendas registradas no dia
-              </p>
+              <p style={styles.metricText}>vendas registradas no dia</p>
             </div>
 
             <div style={styles.wideCard}>
@@ -149,7 +159,7 @@ function Dashboard() {
                 ) : (
                   <div style={styles.productList}>
                     {topProdutos.map((produto) => (
-                      <div key={produto.id} style={styles.productItem}>
+                      <div key={produto.id} style={styles.productItem(isMobile)}>
                         <div>
                           <p style={styles.productName}>{produto.nome}</p>
                           <p style={styles.productMeta}>
@@ -183,12 +193,10 @@ function Dashboard() {
                 <p style={styles.emptyDark}>Nenhum ranking disponível.</p>
               ) : (
                 ranking.map((item) => {
-                  const urlFoto = item.foto_perfil
-                    ? `http://localhost:3001${item.foto_perfil}`
-                    : null;
+                 const urlFoto = getImageUrl(item.foto_perfil);
 
                   return (
-                    <div key={item.usuario_id} style={styles.rankRow}>
+                    <div key={item.usuario_id} style={styles.rankRow(isMobile)}>
                       <div style={styles.rankLeft}>
                         <span style={styles.rankPos}>{item.posicao}</span>
 
@@ -235,13 +243,14 @@ const styles = {
     flexDirection: "column",
     gap: "18px",
   },
-  topBar: {
+  topBar: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "20px",
     flexWrap: "wrap",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   greetingMini: {
     fontSize: "13px",
     textTransform: "uppercase",
@@ -250,21 +259,22 @@ const styles = {
     fontWeight: 700,
     marginBottom: "8px",
   },
-  greetingTitle: {
-    fontSize: "36px",
+  greetingTitle: (isMobile) => ({
+    fontSize: isMobile ? "28px" : "36px",
     lineHeight: 1.05,
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
     marginBottom: "10px",
-  },
+  }),
   greetingText: {
     color: "#666",
     fontSize: "15px",
     lineHeight: 1.7,
   },
-  searchBox: {
-    minWidth: "250px",
+  searchBox: (isMobile) => ({
+    minWidth: isMobile ? "100%" : "250px",
+    width: isMobile ? "100%" : "auto",
     background: "rgba(255,255,255,0.65)",
     border: "1px solid rgba(17,17,17,0.06)",
     height: "50px",
@@ -274,7 +284,7 @@ const styles = {
     gap: "10px",
     padding: "0 16px",
     color: "#666",
-  },
+  }),
   searchIcon: {
     fontSize: "16px",
   },
@@ -282,20 +292,20 @@ const styles = {
     fontSize: "14px",
     fontWeight: 500,
   },
-  dashboardBoard: {
+  dashboardBoard: (columns, isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1.3fr 0.85fr",
+    gridTemplateColumns: columns,
     gap: "18px",
-    height: "calc(100vh - 230px)",
-    minHeight: "620px",
-    maxHeight: "620px",
-  },
-  leftColumn: {
+    height: isMobile ? "auto" : "calc(100vh - 230px)",
+    minHeight: isMobile ? "auto" : "620px",
+    maxHeight: isMobile ? "none" : "620px",
+  }),
+  leftColumn: (isMobile) => ({
     display: "grid",
-    gridTemplateRows: "1fr 0.9fr",
+    gridTemplateRows: isMobile ? "auto auto" : "1fr 0.9fr",
     gap: "18px",
     minHeight: 0,
-  },
+  }),
   rightColumn: {
     minHeight: 0,
   },
@@ -335,16 +345,17 @@ const styles = {
     overflowY: "auto",
     paddingRight: "4px",
   },
-  metricRow: {
+  metricRow: (isMobile) => ({
     background: "rgba(255,255,255,0.44)",
     border: "1px solid rgba(17,17,17,0.05)",
     borderRadius: "18px",
     padding: "16px 18px",
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
     gap: "16px",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   metricLabel: {
     fontSize: "12px",
     color: "#5b5349",
@@ -391,12 +402,12 @@ const styles = {
     fontSize: "12px",
     fontWeight: 800,
   },
-  bottomRow: {
+  bottomRow: (columns) => ({
     display: "grid",
-    gridTemplateColumns: "0.8fr 1.2fr",
+    gridTemplateColumns: columns,
     gap: "18px",
     minHeight: 0,
-  },
+  }),
   smallCard: {
     background: "#fff",
     borderRadius: "24px",
@@ -447,14 +458,15 @@ const styles = {
     flexDirection: "column",
     gap: "10px",
   },
-  productItem: {
+  productItem: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
     gap: "14px",
     padding: "12px 0",
     borderBottom: "1px solid #eee8df",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   productName: {
     fontSize: "15px",
     fontWeight: 700,
@@ -508,14 +520,15 @@ const styles = {
     flexDirection: "column",
     gap: "10px",
   },
-  rankRow: {
+  rankRow: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
     gap: "12px",
     padding: "12px 0",
     borderBottom: "1px solid rgba(255,255,255,0.08)",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   rankLeft: {
     display: "flex",
     alignItems: "center",

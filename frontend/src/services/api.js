@@ -1,7 +1,9 @@
 import axios from "axios";
 
+export const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -13,5 +15,10 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
+
+export function getImageUrl(path) {
+  if (!path) return null;
+  return `${API_BASE_URL}${path}`;
+}
 
 export default api;

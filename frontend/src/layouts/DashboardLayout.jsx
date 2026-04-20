@@ -1,14 +1,15 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useResponsive } from "../hooks/useResponsive";
+import api, { getImageUrl } from "../services/api";
 
 function DashboardLayout({ children }) {
   const { logout, usuario } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isMobile, isTablet } = useResponsive();
 
-  const urlFoto = usuario?.foto_perfil
-    ? `http://localhost:3001${usuario.foto_perfil}`
-    : null;
+ const urlFoto = getImageUrl(item.foto_perfil);
 
   function handleLogout() {
     logout();
@@ -30,10 +31,12 @@ function DashboardLayout({ children }) {
     { path: "/perfil", label: "Perfil", icon: "◎" },
   ];
 
+  const shellColumns = isMobile ? "1fr" : isTablet ? "220px 1fr" : "260px 1fr";
+
   return (
-    <div style={styles.page}>
-      <div style={styles.shell}>
-        <aside style={styles.sidebar}>
+    <div style={styles.page(isMobile)}>
+      <div style={styles.shell(shellColumns, isMobile)}>
+        <aside style={styles.sidebar(isMobile)}>
           <div>
             <div style={styles.brand}>
               <div style={styles.brandIcon}>
@@ -43,11 +46,11 @@ function DashboardLayout({ children }) {
 
               <div>
                 <p style={styles.brandMini}>Sistema</p>
-                <h2 style={styles.brandTitle}>Lift Barber</h2>
+                <h2 style={styles.brandTitle}>LiftBarberStore</h2>
               </div>
             </div>
 
-            <nav style={styles.nav}>
+            <nav style={styles.nav(isMobile)}>
               {links.map((item) => {
                 const ativo = isActive(item.path);
 
@@ -75,7 +78,7 @@ function DashboardLayout({ children }) {
             </nav>
           </div>
 
-          <div style={styles.sidebarFooter}>
+          <div style={styles.sidebarFooter(isMobile)}>
             <div style={styles.userCard}>
               {urlFoto ? (
                 <img src={urlFoto} alt="Foto do usuário" style={styles.avatar} />
@@ -97,7 +100,7 @@ function DashboardLayout({ children }) {
           </div>
         </aside>
 
-        <main style={styles.main}>
+        <main style={styles.main(isMobile)}>
           {children}
         </main>
       </div>
@@ -106,33 +109,34 @@ function DashboardLayout({ children }) {
 }
 
 const styles = {
-  page: {
+  page: (isMobile) => ({
     minHeight: "100vh",
     background: "linear-gradient(135deg, #0a0a0a 0%, #171717 100%)",
-    padding: "20px",
-  },
-  shell: {
-    minHeight: "calc(100vh - 40px)",
+    padding: isMobile ? "10px" : "20px",
+  }),
+  shell: (columns, isMobile) => ({
+    minHeight: isMobile ? "auto" : "calc(100vh - 40px)",
     background: "linear-gradient(135deg, #f7f4ef 0%, #f1ebe3 100%)",
     borderRadius: "28px",
     boxShadow: "0 24px 60px rgba(0,0,0,0.28)",
     display: "grid",
-    gridTemplateColumns: "260px 1fr",
+    gridTemplateColumns: columns,
     overflow: "hidden",
-  },
-  sidebar: {
+  }),
+  sidebar: (isMobile) => ({
     background: "#111111",
     color: "#fff",
-    padding: "24px 18px",
+    padding: isMobile ? "18px 14px" : "24px 18px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-  },
+    gap: "18px",
+  }),
   brand: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    marginBottom: "28px",
+    marginBottom: "24px",
   },
   brandIcon: {
     width: "46px",
@@ -174,11 +178,11 @@ const styles = {
     fontWeight: 800,
     letterSpacing: "-0.03em",
   },
-  nav: {
-    display: "flex",
-    flexDirection: "column",
+  nav: (isMobile) => ({
+    display: "grid",
+    gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "1fr",
     gap: "10px",
-  },
+  }),
   navItem: {
     display: "flex",
     alignItems: "center",
@@ -188,7 +192,6 @@ const styles = {
     color: "rgba(255,255,255,0.75)",
     fontSize: "14px",
     fontWeight: 600,
-    transition: "all 0.2s ease",
   },
   navItemActive: {
     background: "rgba(255,255,255,0.08)",
@@ -204,14 +207,15 @@ const styles = {
     justifyContent: "center",
     fontSize: "13px",
     fontWeight: 700,
+    flexShrink: 0,
   },
   navIconActive: {
     background: "linear-gradient(135deg, #c91f28 0%, #1f4fa3 100%)",
     color: "#fff",
   },
-  sidebarFooter: {
-    marginTop: "24px",
-  },
+  sidebarFooter: (isMobile) => ({
+    marginTop: isMobile ? "8px" : "24px",
+  }),
   userCard: {
     display: "flex",
     alignItems: "center",
@@ -264,16 +268,11 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
-  main: {
-
-    padding: "26px",
-
+  main: (isMobile) => ({
+    padding: isMobile ? "16px" : "26px",
     overflowY: "auto",
-
-    minHeight: "calc(100vh - 40px)",
-
-  },
-
+    minHeight: isMobile ? "auto" : "calc(100vh - 40px)",
+  }),
 };
 
 export default DashboardLayout;
