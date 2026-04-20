@@ -12,7 +12,7 @@ async function startServer() {
     connection.release();
 
     app.listen(PORT, () => {
-      console.log(`Servidor rodando em http://localhost:${PORT}`);
+      console.log(`Servidor rodando na porta ${PORT}`);
     });
   } catch (error) {
     console.error("Erro ao conectar no MySQL:");
