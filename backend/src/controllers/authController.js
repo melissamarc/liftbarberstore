@@ -13,7 +13,6 @@ async function login(req, res) {
       });
     }
 
-    // buscar usuário
     const [usuarios] = await pool.query(
       "SELECT * FROM usuarios WHERE email = ?",
       [email]
@@ -27,7 +26,6 @@ async function login(req, res) {
 
     const usuario = usuarios[0];
 
-    // verificar senha
     const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
 
     if (!senhaValida) {
@@ -36,14 +34,13 @@ async function login(req, res) {
       });
     }
 
-    // gerar token
     const token = jwt.sign(
       {
         id: usuario.id,
         email: usuario.email,
         cargo: usuario.cargo
       },
-      "segredo_super_secreto",
+      process.env.JWT_SECRET,
       {
         expiresIn: "1d"
       }
@@ -56,10 +53,10 @@ async function login(req, res) {
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
-        cargo: usuario.cargo
+        cargo: usuario.cargo,
+        foto_perfil: usuario.foto_perfil || null
       }
     });
-
   } catch (error) {
     console.error("Erro no login:", error.message);
     return res.status(500).json({

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api from "../services/api";
+import { useResponsive } from "../hooks/useResponsive";
 
 function NewAISale() {
   const [mensagem, setMensagem] = useState("");
@@ -9,6 +10,8 @@ function NewAISale() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [mensagemSucesso, setMensagemSucesso] = useState("");
+
+  const { isMobile, isTablet } = useResponsive();
 
   async function interpretarMensagem() {
     try {
@@ -92,7 +95,7 @@ function NewAISale() {
       <header style={styles.pageHeader}>
         <div>
           <p style={styles.pageMini}>IA</p>
-          <h1 style={styles.pageTitle}>Nova venda com IA</h1>
+          <h1 style={styles.pageTitle(isMobile)}>Nova venda com IA</h1>
           <p style={styles.pageSubtitle}>
             Cole a mensagem do cliente, deixe a IA sugerir os itens e confirme a venda.
           </p>
@@ -102,8 +105,13 @@ function NewAISale() {
       {erro && <p style={styles.erro}>{erro}</p>}
       {mensagemSucesso && <p style={styles.sucesso}>{mensagemSucesso}</p>}
 
-      <section style={styles.chatBoard}>
-        <aside style={styles.sidebar}>
+      <section
+        style={styles.chatBoard(
+          isMobile ? "1fr" : isTablet ? "1fr" : "300px 1fr",
+          isMobile
+        )}
+      >
+        <aside style={styles.sidebar(isMobile)}>
           <div style={styles.darkCard}>
             <p style={styles.darkMini}>Assistente</p>
             <h3 style={styles.darkTitle}>Interpretação inteligente</h3>
@@ -129,21 +137,21 @@ function NewAISale() {
           </div>
         </aside>
 
-        <div style={styles.chatArea}>
+        <div style={styles.chatArea(isMobile)}>
           <div style={styles.chatTop}>
             <h2 style={styles.chatTitle}>Conversa</h2>
           </div>
 
-          <div style={styles.chatBody}>
+          <div style={styles.chatBody(isMobile)}>
             <div style={styles.messageAssistant}>
-              <div style={styles.messageBubbleAssistant}>
+              <div style={styles.messageBubbleAssistant(isMobile)}>
                 Cole abaixo a mensagem do cliente para eu identificar os itens da venda.
               </div>
             </div>
 
             {mensagem.trim() && (
               <div style={styles.messageUser}>
-                <div style={styles.messageBubbleUser}>{mensagem}</div>
+                <div style={styles.messageBubbleUser(isMobile)}>{mensagem}</div>
               </div>
             )}
 
@@ -156,7 +164,7 @@ function NewAISale() {
 
                   <div style={styles.resultList}>
                     {itens.map((item, index) => (
-                      <div key={index} style={styles.resultItem}>
+                      <div key={index} style={styles.resultItem(isMobile)}>
                         <div style={styles.resultItemLeft}>
                           <div style={styles.aiBadge}>IA</div>
 
@@ -168,7 +176,7 @@ function NewAISale() {
                           </div>
                         </div>
 
-                        <div style={styles.resultItemRight}>
+                        <div style={styles.resultItemRight(isMobile)}>
                           <div style={styles.quantityBox}>
                             <label style={styles.qtyLabel}>Qtd.</label>
                             <input
@@ -191,7 +199,7 @@ function NewAISale() {
 
                           <button
                             onClick={() => removerItem(index)}
-                            style={styles.removeButton}
+                            style={styles.removeButton(isMobile)}
                           >
                             Remover
                           </button>
@@ -204,7 +212,7 @@ function NewAISale() {
             )}
           </div>
 
-          <div style={styles.chatInputArea}>
+          <div style={styles.chatInputArea(isMobile)}>
             <textarea
               placeholder="Cole a mensagem do cliente aqui..."
               value={mensagem}
@@ -212,7 +220,7 @@ function NewAISale() {
               style={styles.textarea}
             />
 
-            <button onClick={interpretarMensagem} style={styles.primaryButton}>
+            <button onClick={interpretarMensagem} style={styles.primaryButton(isMobile)}>
               {loading ? "Interpretando..." : "Interpretar mensagem"}
             </button>
           </div>
@@ -242,12 +250,12 @@ const styles = {
     color: "#7b7b7b",
     fontWeight: 700,
   },
-  pageTitle: {
-    fontSize: "34px",
+  pageTitle: (isMobile) => ({
+    fontSize: isMobile ? "28px" : "34px",
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
-  },
+  }),
   pageSubtitle: {
     color: "#666",
     fontSize: "15px",
@@ -260,21 +268,21 @@ const styles = {
     color: "#0a7d32",
     fontWeight: 600,
   },
-  chatBoard: {
+  chatBoard: (columns, isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "300px 1fr",
+    gridTemplateColumns: columns,
     gap: "20px",
     alignItems: "stretch",
-    height: "calc(100vh - 230px)",
-    minHeight: "620px",
-    maxHeight: "620px",
-  },
-  sidebar: {
+    height: isMobile ? "auto" : "calc(100vh - 230px)",
+    minHeight: isMobile ? "auto" : "620px",
+    maxHeight: isMobile ? "none" : "620px",
+  }),
+  sidebar: (isMobile) => ({
     display: "flex",
     flexDirection: "column",
     gap: "18px",
-    height: "100%",
-  },
+    height: isMobile ? "auto" : "100%",
+  }),
   darkCard: {
     background: "#171921",
     color: "#fff",
@@ -339,7 +347,7 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
-  chatArea: {
+  chatArea: (isMobile) => ({
     background: "#fff",
     borderRadius: "24px",
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
@@ -347,7 +355,8 @@ const styles = {
     flexDirection: "column",
     minHeight: 0,
     overflow: "hidden",
-  },
+    height: isMobile ? "auto" : "100%",
+  }),
   chatTop: {
     padding: "22px 22px 0 22px",
     flexShrink: 0,
@@ -358,15 +367,15 @@ const styles = {
     color: "#111",
     letterSpacing: "-0.03em",
   },
-  chatBody: {
-    flex: 1,
+  chatBody: (isMobile) => ({
+    flex: isMobile ? "unset" : 1,
     minHeight: 0,
-    overflowY: "auto",
+    overflowY: isMobile ? "visible" : "auto",
     padding: "22px",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-  },
+  }),
   messageAssistant: {
     display: "flex",
     justifyContent: "flex-start",
@@ -375,17 +384,17 @@ const styles = {
     display: "flex",
     justifyContent: "flex-end",
   },
-  messageBubbleAssistant: {
-    maxWidth: "70%",
+  messageBubbleAssistant: (isMobile) => ({
+    maxWidth: isMobile ? "100%" : "70%",
     background: "#f5f2ec",
     color: "#111",
     padding: "14px 16px",
     borderRadius: "18px 18px 18px 6px",
     lineHeight: 1.6,
     fontSize: "14px",
-  },
-  messageBubbleUser: {
-    maxWidth: "70%",
+  }),
+  messageBubbleUser: (isMobile) => ({
+    maxWidth: isMobile ? "100%" : "70%",
     background: "#111",
     color: "#fff",
     padding: "14px 16px",
@@ -393,7 +402,7 @@ const styles = {
     lineHeight: 1.6,
     fontSize: "14px",
     whiteSpace: "pre-wrap",
-  },
+  }),
   resultBox: {
     width: "100%",
     background: "#f8f6f2",
@@ -414,16 +423,17 @@ const styles = {
     flexDirection: "column",
     gap: "14px",
   },
-  resultItem: {
+  resultItem: (isMobile) => ({
     background: "#fff",
     borderRadius: "18px",
     padding: "16px",
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
     gap: "16px",
     border: "1px solid #eee8df",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   resultItemLeft: {
     display: "flex",
     alignItems: "center",
@@ -451,13 +461,14 @@ const styles = {
     color: "#666",
     fontSize: "13px",
   },
-  resultItemRight: {
+  resultItemRight: (isMobile) => ({
     display: "flex",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
     gap: "14px",
     flexWrap: "wrap",
     justifyContent: "flex-end",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   quantityBox: {
     display: "flex",
     flexDirection: "column",
@@ -494,7 +505,7 @@ const styles = {
     fontWeight: 800,
     color: "#111",
   },
-  removeButton: {
+  removeButton: (isMobile) => ({
     height: "42px",
     padding: "0 16px",
     borderRadius: "999px",
@@ -503,16 +514,17 @@ const styles = {
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
-  },
-  chatInputArea: {
+    width: isMobile ? "100%" : "auto",
+  }),
+  chatInputArea: (isMobile) => ({
     padding: "18px 22px 22px 22px",
     borderTop: "1px solid #eee8df",
     display: "grid",
-    gridTemplateColumns: "1fr auto",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
     gap: "14px",
     alignItems: "end",
     flexShrink: 0,
-  },
+  }),
   textarea: {
     minHeight: "110px",
     maxHeight: "110px",
@@ -525,7 +537,7 @@ const styles = {
     outline: "none",
     background: "#faf9f7",
   },
-  primaryButton: {
+  primaryButton: (isMobile) => ({
     height: "52px",
     padding: "0 18px",
     borderRadius: "14px",
@@ -534,8 +546,9 @@ const styles = {
     color: "#fff",
     fontWeight: 800,
     cursor: "pointer",
-    minWidth: "190px",
-  },
+    minWidth: isMobile ? "100%" : "190px",
+    width: isMobile ? "100%" : "auto",
+  }),
 };
 
 export default NewAISale;

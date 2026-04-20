@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api, { getImageUrl } from "../services/api";
+import { useResponsive } from "../hooks/useResponsive";
 
 function NewManualSale() {
   const [produtos, setProdutos] = useState([]);
@@ -10,6 +11,8 @@ function NewManualSale() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
+
+  const { isMobile, isTablet } = useResponsive();
 
   useEffect(() => {
     async function carregarProdutos() {
@@ -139,7 +142,7 @@ function NewManualSale() {
       <header style={styles.pageHeader}>
         <div>
           <p style={styles.pageMini}>Operação</p>
-          <h1 style={styles.pageTitle}>Nova venda manual</h1>
+          <h1 style={styles.pageTitle(isMobile)}>Nova venda manual</h1>
           <p style={styles.pageSubtitle}>
             Monte a venda item por item com total calculado automaticamente.
           </p>
@@ -149,10 +152,15 @@ function NewManualSale() {
       {erro && <p style={styles.erro}>{erro}</p>}
       {mensagem && <p style={styles.sucesso}>{mensagem}</p>}
 
-      <section style={styles.board}>
-        <aside style={styles.sidebar}>
+      <section
+        style={styles.board(
+          isMobile ? "1fr" : isTablet ? "1fr" : "320px 1fr",
+          isMobile
+        )}
+      >
+        <aside style={styles.sidebar(isMobile)}>
           <div style={styles.sidebarCard}>
-            <div style={styles.cardHeader}>
+            <div style={styles.cardHeader(isMobile)}>
               <h2 style={styles.cardTitle}>Adicionar item</h2>
               <span style={styles.badge}>Manual</span>
             </div>
@@ -206,12 +214,12 @@ function NewManualSale() {
           </div>
         </aside>
 
-        <div style={styles.content}>
+        <div style={styles.content(isMobile)}>
           <div style={styles.contentHeader}>
             <h2 style={styles.contentTitle}>Itens da venda</h2>
           </div>
 
-          <div style={styles.itemsViewport}>
+          <div style={styles.itemsViewport(isMobile)}>
             {itensVenda.length === 0 ? (
               <div style={styles.emptyState}>
                 <p style={styles.emptyTitle}>Nenhum item adicionado</p>
@@ -223,10 +231,9 @@ function NewManualSale() {
               <div style={styles.itemsList}>
                 {itensVenda.map((item) => {
                   const fotoUrl = getImageUrl(item.foto_produto);
-                    
 
                   return (
-                    <div key={item.produto_id} style={styles.itemCard}>
+                    <div key={item.produto_id} style={styles.itemCard(isMobile)}>
                       <div style={styles.itemLeft}>
                         <div style={styles.itemImageBox}>
                           {fotoUrl ? (
@@ -248,7 +255,7 @@ function NewManualSale() {
                         </div>
                       </div>
 
-                      <div style={styles.itemRight}>
+                      <div style={styles.itemRight(isMobile)}>
                         <div style={styles.itemInfoBlock}>
                           <span style={styles.itemInfoLabel}>Qtd.</span>
                           <strong style={styles.itemInfoValue}>{item.quantidade}</strong>
@@ -263,7 +270,7 @@ function NewManualSale() {
 
                         <button
                           onClick={() => removerItem(item.produto_id)}
-                          style={styles.removeButton}
+                          style={styles.removeButton(isMobile)}
                         >
                           Remover
                         </button>
@@ -300,12 +307,12 @@ const styles = {
     color: "#7b7b7b",
     fontWeight: 700,
   },
-  pageTitle: {
-    fontSize: "34px",
+  pageTitle: (isMobile) => ({
+    fontSize: isMobile ? "28px" : "34px",
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
-  },
+  }),
   pageSubtitle: {
     color: "#666",
     fontSize: "15px",
@@ -318,21 +325,21 @@ const styles = {
     color: "#0a7d32",
     fontWeight: 600,
   },
-  board: {
+  board: (columns, isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "320px 1fr",
+    gridTemplateColumns: columns,
     gap: "20px",
     alignItems: "stretch",
-    height: "calc(100vh - 230px)",
-    minHeight: "620px",
-    maxHeight: "620px",
-  },
-  sidebar: {
+    height: isMobile ? "auto" : "calc(100vh - 230px)",
+    minHeight: isMobile ? "auto" : "620px",
+    maxHeight: isMobile ? "none" : "620px",
+  }),
+  sidebar: (isMobile) => ({
     display: "flex",
     flexDirection: "column",
     gap: "18px",
-    height: "100%",
-  },
+    height: isMobile ? "auto" : "100%",
+  }),
   sidebarCard: {
     background: "#fff",
     borderRadius: "24px",
@@ -377,13 +384,14 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
-  cardHeader: {
+  cardHeader: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
+    flexDirection: isMobile ? "column" : "row",
     gap: "10px",
     marginBottom: "18px",
-  },
+  }),
   cardTitle: {
     fontSize: "20px",
     fontWeight: 800,
@@ -428,7 +436,7 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
-  content: {
+  content: (isMobile) => ({
     background: "#fff",
     borderRadius: "24px",
     padding: "22px",
@@ -437,7 +445,8 @@ const styles = {
     flexDirection: "column",
     minHeight: 0,
     overflow: "hidden",
-  },
+    height: isMobile ? "auto" : "100%",
+  }),
   contentHeader: {
     marginBottom: "18px",
     flexShrink: 0,
@@ -448,12 +457,12 @@ const styles = {
     color: "#111",
     letterSpacing: "-0.03em",
   },
-  itemsViewport: {
-    flex: 1,
+  itemsViewport: (isMobile) => ({
+    flex: isMobile ? "unset" : 1,
     minHeight: 0,
-    overflowY: "auto",
-    paddingRight: "4px",
-  },
+    overflowY: isMobile ? "visible" : "auto",
+    paddingRight: isMobile ? 0 : "4px",
+  }),
   emptyState: {
     background: "#f8f6f2",
     borderRadius: "20px",
@@ -475,16 +484,17 @@ const styles = {
     flexDirection: "column",
     gap: "16px",
   },
-  itemCard: {
+  itemCard: (isMobile) => ({
     background: "#f8f6f2",
     borderRadius: "22px",
     padding: "18px",
     border: "1px solid #eee8df",
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
     gap: "16px",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   itemLeft: {
     display: "flex",
     alignItems: "center",
@@ -527,13 +537,14 @@ const styles = {
     color: "#666",
     fontSize: "14px",
   },
-  itemRight: {
+  itemRight: (isMobile) => ({
     display: "flex",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
     gap: "18px",
     flexWrap: "wrap",
     justifyContent: "flex-end",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   itemInfoBlock: {
     display: "flex",
     flexDirection: "column",
@@ -552,7 +563,7 @@ const styles = {
     fontWeight: 800,
     color: "#111",
   },
-  removeButton: {
+  removeButton: (isMobile) => ({
     height: "44px",
     padding: "0 16px",
     borderRadius: "999px",
@@ -561,7 +572,8 @@ const styles = {
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
-  },
+    width: isMobile ? "100%" : "auto",
+  }),
 };
 
 export default NewManualSale;
