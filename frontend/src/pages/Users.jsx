@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api, { getImageUrl } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import { useResponsive } from "../hooks/useResponsive";
 
 function Users() {
   const [usuarios, setUsuarios] = useState([]);
@@ -9,6 +10,7 @@ function Users() {
   const [busca, setBusca] = useState("");
 
   const { usuario } = useAuth();
+  const { isMobile, isTablet } = useResponsive();
 
   useEffect(() => {
     async function carregarUsuarios() {
@@ -57,7 +59,7 @@ function Users() {
         <header style={styles.pageHeader}>
           <div>
             <p style={styles.pageMini}>Equipe</p>
-            <h1 style={styles.pageTitle}>Usuários da loja</h1>
+            <h1 style={styles.pageTitle(isMobile)}>Usuários da loja</h1>
             <p style={styles.pageSubtitle}>
               Área restrita para administradores.
             </p>
@@ -83,7 +85,7 @@ function Users() {
       <header style={styles.pageHeader}>
         <div>
           <p style={styles.pageMini}>Equipe</p>
-          <h1 style={styles.pageTitle}>Usuários da loja</h1>
+          <h1 style={styles.pageTitle(isMobile)}>Usuários da loja</h1>
           <p style={styles.pageSubtitle}>
             Visualize e acompanhe as pessoas que fazem parte da operação.
           </p>
@@ -92,10 +94,15 @@ function Users() {
 
       {erro && <p style={styles.erro}>{erro}</p>}
 
-      <section style={styles.board}>
+      <section
+        style={styles.board(
+          isMobile ? "1fr" : isTablet ? "1fr" : "1fr 290px",
+          isMobile
+        )}
+      >
         <div style={styles.mainArea}>
-          <div style={styles.topTools}>
-            <div style={styles.searchBox}>
+          <div style={styles.topTools(isMobile)}>
+            <div style={styles.searchBox(isMobile)}>
               <span style={styles.searchIcon}>⌕</span>
               <input
                 type="text"
@@ -111,7 +118,7 @@ function Users() {
             </div>
           </div>
 
-          <div style={styles.cardsViewport}>
+          <div style={styles.cardsViewport(isMobile)}>
             {usuariosFiltrados.length === 0 ? (
               <div style={styles.emptyState}>
                 <p style={styles.emptyTitle}>Nenhum usuário encontrado</p>
@@ -120,9 +127,14 @@ function Users() {
                 </p>
               </div>
             ) : (
-              <div style={styles.cardsGrid}>
+              <div
+                style={styles.cardsGrid(
+                  isMobile ? "1fr" : isTablet ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))"
+                )}
+              >
                 {usuariosFiltrados.map((item) => {
                   const fotoUrl = getImageUrl(item.foto_perfil);
+
                   return (
                     <div key={item.id} style={styles.userCard}>
                       <div style={styles.userCardTop}>
@@ -254,12 +266,12 @@ const styles = {
     color: "#7b7b7b",
     fontWeight: 700,
   },
-  pageTitle: {
-    fontSize: "34px",
+  pageTitle: (isMobile) => ({
+    fontSize: isMobile ? "28px" : "34px",
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
-  },
+  }),
   pageSubtitle: {
     color: "#666",
     fontSize: "15px",
@@ -268,15 +280,15 @@ const styles = {
     color: "#b00020",
     fontWeight: 600,
   },
-  board: {
+  board: (columns, isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1fr 290px",
+    gridTemplateColumns: columns,
     gap: "20px",
     alignItems: "stretch",
-    height: "calc(100vh - 230px)",
-    minHeight: "620px",
-    maxHeight: "620px",
-  },
+    height: isMobile ? "auto" : "calc(100vh - 230px)",
+    minHeight: isMobile ? "auto" : "620px",
+    maxHeight: isMobile ? "none" : "620px",
+  }),
   mainArea: {
     background: "#fff",
     borderRadius: "24px",
@@ -287,18 +299,19 @@ const styles = {
     minHeight: 0,
     overflow: "hidden",
   },
-  topTools: {
+  topTools: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
+    flexDirection: isMobile ? "column" : "row",
     gap: "16px",
     flexWrap: "wrap",
     marginBottom: "18px",
     flexShrink: 0,
-  },
-  searchBox: {
+  }),
+  searchBox: (isMobile) => ({
     width: "100%",
-    maxWidth: "420px",
+    maxWidth: isMobile ? "100%" : "420px",
     height: "54px",
     background: "#f5f2ec",
     borderRadius: "16px",
@@ -308,7 +321,7 @@ const styles = {
     gap: "10px",
     padding: "0 14px",
     border: "1px solid #ece5da",
-  },
+  }),
   searchIcon: {
     fontSize: "18px",
     color: "#7b7b7b",
@@ -329,18 +342,19 @@ const styles = {
     color: "#1f4fa3",
     fontSize: "13px",
     fontWeight: 800,
+    whiteSpace: "nowrap",
   },
-  cardsViewport: {
-    flex: 1,
+  cardsViewport: (isMobile) => ({
+    flex: isMobile ? "unset" : 1,
     minHeight: 0,
-    overflowY: "auto",
-    paddingRight: "4px",
-  },
-  cardsGrid: {
+    overflowY: isMobile ? "visible" : "auto",
+    paddingRight: isMobile ? "0" : "4px",
+  }),
+  cardsGrid: (columns) => ({
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns: columns,
     gap: "18px",
-  },
+  }),
   userCard: {
     background: "#f8f6f2",
     borderRadius: "22px",
@@ -405,11 +419,13 @@ const styles = {
     fontWeight: 800,
     color: "#111",
     letterSpacing: "-0.03em",
+    wordBreak: "break-word",
   },
   userEmail: {
     color: "#7b7b7b",
     fontSize: "13px",
     lineHeight: 1.5,
+    wordBreak: "break-word",
   },
   userMeta: {
     display: "flex",

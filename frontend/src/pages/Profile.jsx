@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../hooks/useAuth";
 import api, { getImageUrl } from "../services/api";
+import { useAuth } from "../hooks/useAuth";
+import { useResponsive } from "../hooks/useResponsive";
 
 function Profile() {
   const [perfil, setPerfil] = useState(null);
@@ -11,6 +12,7 @@ function Profile() {
   const [mensagem, setMensagem] = useState("");
 
   const { usuario, login } = useAuth();
+  const { isMobile, isTablet } = useResponsive();
 
   async function carregarPerfil() {
     try {
@@ -31,59 +33,59 @@ function Profile() {
   }, []);
 
   async function handleUpload(e) {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!arquivo) {
-    setErro("Selecione uma imagem.");
-    return;
+    if (!arquivo) {
+      setErro("Selecione uma imagem.");
+      return;
+    }
+
+    try {
+      setEnviando(true);
+      setErro("");
+      setMensagem("");
+
+      const formData = new FormData();
+      formData.append("foto", arquivo);
+
+      const response = await api.post("/users/me/foto", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const novaFoto = response.data.foto_perfil;
+
+      const usuarioAtualizado = {
+        ...usuario,
+        foto_perfil: novaFoto,
+      };
+
+      login(usuarioAtualizado, localStorage.getItem("token"));
+
+      setMensagem("Foto atualizada com sucesso.");
+      setArquivo(null);
+
+      await carregarPerfil();
+    } catch (error) {
+      setErro(error.response?.data?.message || "Erro ao enviar foto.");
+    } finally {
+      setEnviando(false);
+    }
   }
-
-  try {
-    setEnviando(true);
-    setErro("");
-    setMensagem("");
-
-    const formData = new FormData();
-    formData.append("foto", arquivo);
-
-    const response = await api.post("/users/me/foto", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    const novaFoto = response.data.foto_perfil;
-
-    const usuarioAtualizado = {
-      ...usuario,
-      foto_perfil: novaFoto,
-    };
-
-    login(usuarioAtualizado, localStorage.getItem("token"));
-
-    setMensagem("Foto atualizada com sucesso.");
-    setArquivo(null);
-
-    await carregarPerfil();
-  } catch (error) {
-    setErro(error.response?.data?.message || "Erro ao enviar foto.");
-  } finally {
-    setEnviando(false);
-  }
-}
 
   if (loading) {
     return <p>Carregando perfil...</p>;
   }
 
-   const urlFoto = getImageUrl(perfil?.foto_perfil);
+  const urlFoto = getImageUrl(perfil?.foto_perfil);
 
   return (
     <div style={styles.page}>
       <header style={styles.pageHeader}>
         <div>
           <p style={styles.pageMini}>Conta</p>
-          <h1 style={styles.pageTitle}>Meu perfil</h1>
+          <h1 style={styles.pageTitle(isMobile)}>Meu perfil</h1>
           <p style={styles.pageSubtitle}>
             Visualize seus dados e atualize sua foto de perfil.
           </p>
@@ -93,10 +95,15 @@ function Profile() {
       {erro && <p style={styles.erro}>{erro}</p>}
       {mensagem && <p style={styles.sucesso}>{mensagem}</p>}
 
-      <section style={styles.board}>
+      <section
+        style={styles.board(
+          isMobile ? "1fr" : isTablet ? "1fr" : "1fr 320px",
+          isMobile
+        )}
+      >
         <div style={styles.mainCard}>
           <div style={styles.heroCard}>
-            <div style={styles.heroLeft}>
+            <div style={styles.heroLeft(isMobile)}>
               <div style={styles.avatarWrap}>
                 {urlFoto ? (
                   <img src={urlFoto} alt="Foto de perfil" style={styles.avatar} />
@@ -109,7 +116,7 @@ function Profile() {
 
               <div>
                 <p style={styles.heroMini}>Usuário logado</p>
-                <h2 style={styles.heroName}>{perfil?.nome}</h2>
+                <h2 style={styles.heroName(isMobile)}>{perfil?.nome}</h2>
                 <p style={styles.heroEmail}>{perfil?.email}</p>
 
                 <div style={styles.heroBadges}>
@@ -137,7 +144,11 @@ function Profile() {
             </div>
           </div>
 
-          <div style={styles.infoGrid}>
+          <div
+            style={styles.infoGrid(
+              isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))"
+            )}
+          >
             <div style={styles.infoCard}>
               <span style={styles.infoLabel}>Nome</span>
               <strong style={styles.infoValue}>{perfil?.nome}</strong>
@@ -223,12 +234,12 @@ const styles = {
     color: "#7b7b7b",
     fontWeight: 700,
   },
-  pageTitle: {
-    fontSize: "34px",
+  pageTitle: (isMobile) => ({
+    fontSize: isMobile ? "28px" : "34px",
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
-  },
+  }),
   pageSubtitle: {
     color: "#666",
     fontSize: "15px",
@@ -241,15 +252,15 @@ const styles = {
     color: "#0a7d32",
     fontWeight: 600,
   },
-  board: {
+  board: (columns, isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1fr 320px",
+    gridTemplateColumns: columns,
     gap: "20px",
     alignItems: "stretch",
-    height: "calc(100vh - 230px)",
-    minHeight: "620px",
-    maxHeight: "620px",
-  },
+    height: isMobile ? "auto" : "calc(100vh - 230px)",
+    minHeight: isMobile ? "auto" : "620px",
+    maxHeight: isMobile ? "none" : "620px",
+  }),
   mainCard: {
     background: "#fff",
     borderRadius: "24px",
@@ -266,12 +277,13 @@ const styles = {
     padding: "22px",
     border: "1px solid #eee8df",
   },
-  heroLeft: {
+  heroLeft: (isMobile) => ({
     display: "flex",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
     gap: "20px",
     flexWrap: "wrap",
-  },
+    flexDirection: isMobile ? "column" : "row",
+  }),
   avatarWrap: {
     width: "128px",
     height: "128px",
@@ -305,18 +317,20 @@ const styles = {
     fontWeight: 700,
     marginBottom: "6px",
   },
-  heroName: {
-    fontSize: "34px",
+  heroName: (isMobile) => ({
+    fontSize: isMobile ? "28px" : "34px",
     lineHeight: 1.05,
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
     marginBottom: "8px",
-  },
+    wordBreak: "break-word",
+  }),
   heroEmail: {
     color: "#666",
     fontSize: "15px",
     marginBottom: "16px",
+    wordBreak: "break-word",
   },
   heroBadges: {
     display: "flex",
@@ -345,11 +359,11 @@ const styles = {
     background: "rgba(176, 0, 32, 0.12)",
     color: "#b00020",
   },
-  infoGrid: {
+  infoGrid: (columns) => ({
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: columns,
     gap: "16px",
-  },
+  }),
   infoCard: {
     background: "#fff",
     borderRadius: "20px",
@@ -372,6 +386,7 @@ const styles = {
     color: "#111",
     fontWeight: 800,
     lineHeight: 1.4,
+    wordBreak: "break-word",
   },
   sidePanel: {
     display: "flex",

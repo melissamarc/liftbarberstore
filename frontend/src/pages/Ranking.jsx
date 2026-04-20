@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import api, {getImageUrl} from "../services/api";
+import api, { getImageUrl } from "../services/api";
+import { useResponsive } from "../hooks/useResponsive";
 
 function Ranking() {
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [busca, setBusca] = useState("");
+
+  const { isMobile, isTablet } = useResponsive();
 
   useEffect(() => {
     async function carregarRanking() {
@@ -43,10 +46,10 @@ function Ranking() {
 
   return (
     <div style={styles.page}>
-      <header style={styles.pageHeader}>
+      <header style={styles.pageHeader(isMobile)}>
         <div>
           <p style={styles.pageMini}>Equipe</p>
-          <h1 style={styles.pageTitle}>Ranking de vendedores</h1>
+          <h1 style={styles.pageTitle(isMobile)}>Ranking de vendedores</h1>
           <p style={styles.pageSubtitle}>
             Acompanhe o desempenho da equipe e veja quem mais vendeu no período.
           </p>
@@ -57,7 +60,11 @@ function Ranking() {
 
       {erro && <p style={styles.erro}>{erro}</p>}
 
-      <section style={styles.topSection}>
+      <section
+        style={styles.topSection(
+          isMobile ? "1fr" : isTablet ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))"
+        )}
+      >
         {top3.map((item, index) => {
           const fotoUrl = getImageUrl(item.foto_perfil);
 
@@ -110,7 +117,7 @@ function Ranking() {
                   </strong>
                 </div>
 
-                <div style={styles.topStatBox}>
+                <div style={{ ...styles.topStatBox, borderRight: "none" }}>
                   <span style={styles.topStatLabel}>Posição</span>
                   <strong style={styles.topStatValue}>{item.posicao}º</strong>
                 </div>
@@ -121,8 +128,8 @@ function Ranking() {
       </section>
 
       <section style={styles.listSection}>
-        <div style={styles.listHeader}>
-          <div style={styles.searchBox}>
+        <div style={styles.listHeader(isMobile)}>
+          <div style={styles.searchBox(isMobile)}>
             <span style={styles.searchIcon}>⌕</span>
             <input
               type="text"
@@ -133,7 +140,7 @@ function Ranking() {
             />
           </div>
 
-          <div style={styles.legend}>
+          <div style={styles.legend(isMobile)}>
             <span style={styles.legendItem}>Total vendido</span>
             <span style={styles.legendItem}>Qtd. vendas</span>
             <span style={styles.legendItem}>Qtd. itens</span>
@@ -144,18 +151,14 @@ function Ranking() {
           {restantes.length === 0 ? (
             <div style={styles.emptyBox}>
               <p style={styles.emptyTitle}>Nenhum usuário encontrado</p>
-              <p style={styles.emptyText}>
-                Tente buscar por outro nome.
-              </p>
+              <p style={styles.emptyText}>Tente buscar por outro nome.</p>
             </div>
           ) : (
             restantes.map((item) => {
-              const fotoUrl = item.foto_perfil
-                ? `http://localhost:3001${item.foto_perfil}`
-                : null;
+              const fotoUrl = getImageUrl(item.foto_perfil);
 
               return (
-                <div key={item.usuario_id} style={styles.rowCard}>
+                <div key={item.usuario_id} style={styles.rowCard(isMobile)}>
                   <div style={styles.rowLeft}>
                     <span style={styles.rowPosition}>{item.posicao}º</span>
 
@@ -177,13 +180,13 @@ function Ranking() {
                     </div>
                   </div>
 
-                  <div style={styles.rowCenter}>
+                  <div style={styles.rowCenter(isMobile)}>
                     <div style={styles.valuePill}>
                       R$ {Number(item.total_vendido).toFixed(2)}
                     </div>
                   </div>
 
-                  <div style={styles.rowRight}>
+                  <div style={styles.rowRight(isMobile)}>
                     <div style={styles.miniStat}>
                       <span style={styles.miniStatLabel}>Vendas</span>
                       <strong style={styles.miniStatValue}>{item.quantidade_vendas}</strong>
@@ -214,13 +217,14 @@ const styles = {
     flexDirection: "column",
     gap: "20px",
   },
-  pageHeader: {
+  pageHeader: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: isMobile ? "flex-start" : "center",
+    flexDirection: isMobile ? "column" : "row",
     gap: "16px",
     flexWrap: "wrap",
-  },
+  }),
   pageMini: {
     fontSize: "12px",
     textTransform: "uppercase",
@@ -229,16 +233,17 @@ const styles = {
     fontWeight: 700,
     marginBottom: "6px",
   },
-  pageTitle: {
-    fontSize: "34px",
+  pageTitle: (isMobile) => ({
+    fontSize: isMobile ? "28px" : "34px",
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
-  },
+  }),
   pageSubtitle: {
     color: "#666",
     fontSize: "15px",
     marginTop: "6px",
+    lineHeight: 1.6,
   },
   periodBadge: {
     padding: "12px 16px",
@@ -252,11 +257,11 @@ const styles = {
     color: "#b00020",
     fontWeight: 600,
   },
-  topSection: {
+  topSection: (columns) => ({
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns: columns,
     gap: "20px",
-  },
+  }),
   topCard: {
     background: "#fff",
     borderRadius: "24px",
@@ -333,6 +338,7 @@ const styles = {
     color: "#7b7b7b",
     fontSize: "14px",
     marginBottom: "20px",
+    wordBreak: "break-word",
   },
   contributionPill: {
     display: "inline-flex",
@@ -378,16 +384,17 @@ const styles = {
     flexDirection: "column",
     gap: "18px",
   },
-  listHeader: {
+  listHeader: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
+    flexDirection: isMobile ? "column" : "row",
     gap: "16px",
     flexWrap: "wrap",
-  },
-  searchBox: {
+  }),
+  searchBox: (isMobile) => ({
     width: "100%",
-    maxWidth: "340px",
+    maxWidth: isMobile ? "100%" : "340px",
     height: "52px",
     background: "#f5f2ec",
     borderRadius: "16px",
@@ -397,7 +404,7 @@ const styles = {
     gap: "10px",
     padding: "0 14px",
     border: "1px solid #ece5da",
-  },
+  }),
   searchIcon: {
     fontSize: "18px",
     color: "#7b7b7b",
@@ -411,12 +418,13 @@ const styles = {
     fontSize: "14px",
     color: "#111",
   },
-  legend: {
+  legend: (isMobile) => ({
     display: "flex",
     alignItems: "center",
     gap: "22px",
     flexWrap: "wrap",
-  },
+    justifyContent: isMobile ? "flex-start" : "flex-end",
+  }),
   legendItem: {
     fontSize: "11px",
     textTransform: "uppercase",
@@ -429,16 +437,16 @@ const styles = {
     flexDirection: "column",
     gap: "12px",
   },
-  rowCard: {
+  rowCard: (isMobile) => ({
     background: "#f8f6f2",
     borderRadius: "18px",
     padding: "16px 18px",
     border: "1px solid #eee8df",
     display: "grid",
-    gridTemplateColumns: "1.25fr 0.8fr 0.7fr",
+    gridTemplateColumns: isMobile ? "1fr" : "1.25fr 0.8fr 0.7fr",
     alignItems: "center",
     gap: "18px",
-  },
+  }),
   rowLeft: {
     display: "flex",
     alignItems: "center",
@@ -456,6 +464,7 @@ const styles = {
     height: "48px",
     borderRadius: "50%",
     objectFit: "cover",
+    flexShrink: 0,
   },
   rowAvatarPlaceholder: {
     width: "48px",
@@ -468,6 +477,7 @@ const styles = {
     justifyContent: "center",
     fontWeight: 900,
     fontSize: "16px",
+    flexShrink: 0,
   },
   rowName: {
     fontSize: "18px",
@@ -475,15 +485,17 @@ const styles = {
     color: "#111",
     letterSpacing: "-0.03em",
     marginBottom: "4px",
+    wordBreak: "break-word",
   },
   rowEmail: {
     color: "#777",
     fontSize: "13px",
+    wordBreak: "break-word",
   },
-  rowCenter: {
+  rowCenter: (isMobile) => ({
     display: "flex",
-    justifyContent: "center",
-  },
+    justifyContent: isMobile ? "flex-start" : "center",
+  }),
   valuePill: {
     padding: "12px 18px",
     borderRadius: "999px",
@@ -493,17 +505,17 @@ const styles = {
     fontSize: "14px",
     whiteSpace: "nowrap",
   },
-  rowRight: {
+  rowRight: (isMobile) => ({
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: isMobile ? "flex-start" : "flex-end",
     gap: "20px",
     flexWrap: "wrap",
-  },
+  }),
   miniStat: {
     display: "flex",
     flexDirection: "column",
     gap: "4px",
-    alignItems: "flex-end",
+    alignItems: "flex-start",
     minWidth: "70px",
   },
   miniStatLabel: {

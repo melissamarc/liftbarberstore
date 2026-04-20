@@ -2,17 +2,19 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import { useResponsive } from "../hooks/useResponsive";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { isMobile, isTablet } = useResponsive();
 
-  async function handleLogin(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     try {
@@ -24,9 +26,7 @@ function Login() {
         senha,
       });
 
-      const { token, usuario } = response.data;
-
-      login(usuario, token);
+      login(response.data.usuario, response.data.token);
       navigate("/dashboard");
     } catch (error) {
       setErro(error.response?.data?.message || "Erro ao fazer login.");
@@ -37,93 +37,72 @@ function Login() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.card}>
-        <section style={styles.formSide}>
-          <div style={styles.topBar}>
+      <div style={styles.card(isMobile)}>
+        <div
+          style={styles.grid(
+            isMobile ? "1fr" : isTablet ? "1fr" : "1fr 1fr",
+            isMobile
+          )}
+        >
+          <div style={styles.formSide}>
             <Link to="/" style={styles.backButton}>
-              ←
+              ← Voltar
             </Link>
 
-            <div style={styles.switchTabs}>
-              <Link to="/cadastro" style={styles.tabGhost}>
-                Cadastro
+            <div style={styles.authToggle}>
+              <Link to="/register" style={styles.toggleInactive}>
+                Register
               </Link>
-              <span style={styles.tabActive}>Login</span>
+              <span style={styles.toggleActive}>Login</span>
+            </div>
+
+            <div style={styles.formWrap}>
+              <h1 style={styles.title}>Welcome back</h1>
+              <p style={styles.subtitle}>Entre na sua conta para continuar.</p>
+
+              {erro && <p style={styles.erro}>{erro}</p>}
+
+              <form onSubmit={handleSubmit} style={styles.form}>
+                <div style={styles.field}>
+                  <label style={styles.label}>Email</label>
+                  <input
+                    type="email"
+                    placeholder="seuemail@exemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.field}>
+                  <label style={styles.label}>Senha</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <button type="submit" style={styles.primaryButton}>
+                  {loading ? "Entrando..." : "Log In"}
+                </button>
+              </form>
             </div>
           </div>
 
-          <div style={styles.formContent}>
-            <h1 style={styles.title}>Bem-vindo de volta</h1>
-            <p style={styles.subtitle}>
-              Entre na sua conta para acompanhar vendas, equipe e desempenho da loja.
-            </p>
-
-            {erro && <p style={styles.erro}>{erro}</p>}
-
-            <form onSubmit={handleLogin} style={styles.form}>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Email</label>
-                <input
-                  type="email"
-                  placeholder="Digite seu email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  style={styles.input}
-                />
+          <div style={styles.visualSide(isMobile)}>
+            <div style={styles.visualCard}>
+              <div style={styles.visualOverlay}>
+                <h2 style={styles.visualTitle}>Every destination has a story</h2>
+                <p style={styles.visualText}>
+                  Organize sua loja, acompanhe resultados e registre vendas com mais inteligência.
+                </p>
               </div>
-
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Senha</label>
-                <input
-                  type="password"
-                  placeholder="Digite sua senha"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  required
-                  style={styles.input}
-                />
-              </div>
-
-              <button type="submit" disabled={loading} style={styles.primaryButton}>
-                {loading ? "Entrando..." : "Entrar"}
-              </button>
-            </form>
-
-            <p style={styles.bottomText}>
-              Ainda não tem conta?{" "}
-              <Link to="/cadastro" style={styles.inlineLink}>
-                Criar conta
-              </Link>
-            </p>
-          </div>
-        </section>
-
-        <section style={styles.visualSide}>
-          <div style={styles.visualPanel}>
-            <div style={styles.visualOverlay}></div>
-
-            <div style={styles.visualPole}>
-              <div style={styles.poleCap}></div>
-              <div style={styles.poleBody}>
-                <div style={styles.poleStripeBlue}></div>
-                <div style={styles.poleStripeRed}></div>
-                <div style={styles.poleStripeBlue2}></div>
-              </div>
-              <div style={styles.poleCap}></div>
-            </div>
-
-            <div style={styles.visualTextBox}>
-              <p style={styles.visualMini}>LiftBarberStore</p>
-              <h2 style={styles.visualTitle}>
-                Toda venda conta uma história de crescimento.
-              </h2>
-              <p style={styles.visualDesc}>
-                Gerencie sua operação com mais clareza, velocidade e inteligência.
-              </p>
             </div>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );
@@ -132,240 +111,151 @@ function Login() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #0a0a0a 0%, #171717 100%)",
+    background: "#d9d9d9",
     display: "flex",
-    justifyContent: "center",
     alignItems: "center",
-    padding: "32px",
+    justifyContent: "center",
+    padding: "20px",
   },
-  card: {
+  card: (isMobile) => ({
     width: "100%",
     maxWidth: "1200px",
-    minHeight: "720px",
-    background: "#f7f4ef",
-    borderRadius: "28px",
-    boxShadow: "0 24px 60px rgba(0,0,0,0.28)",
+    background: "#fff",
+    borderRadius: "24px",
+    boxShadow: "0 12px 35px rgba(0,0,0,0.10)",
+    padding: isMobile ? "18px" : "22px",
+  }),
+  grid: (columns, isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    overflow: "hidden",
-  },
+    gridTemplateColumns: columns,
+    gap: "22px",
+    alignItems: "stretch",
+  }),
   formSide: {
-    padding: "32px",
     display: "flex",
     flexDirection: "column",
-  },
-  topBar: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "40px",
+    gap: "18px",
   },
   backButton: {
-    width: "42px",
+    width: "fit-content",
     height: "42px",
-    borderRadius: "50%",
-    background: "#ece8e1",
+    padding: "0 14px",
+    borderRadius: "999px",
+    background: "#f4f4f4",
+    display: "inline-flex",
+    alignItems: "center",
     color: "#111",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "22px",
     fontWeight: 700,
   },
-  switchTabs: {
+  authToggle: {
     display: "flex",
-    alignItems: "center",
+    justifyContent: "flex-end",
     gap: "8px",
-    background: "#efebe5",
-    padding: "6px",
-    borderRadius: "999px",
+    flexWrap: "wrap",
   },
-  tabGhost: {
+  toggleInactive: {
     padding: "8px 14px",
     borderRadius: "999px",
+    background: "#f3f3f3",
     color: "#666",
-    fontSize: "13px",
     fontWeight: 700,
+    fontSize: "13px",
   },
-  tabActive: {
+  toggleActive: {
     padding: "8px 14px",
     borderRadius: "999px",
-    background: "#c91f28",
+    background: "#ef4637",
     color: "#fff",
+    fontWeight: 700,
     fontSize: "13px",
-    fontWeight: 800,
   },
-  formContent: {
+  formWrap: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
-    maxWidth: "430px",
-    margin: "0 auto",
+    maxWidth: "420px",
     width: "100%",
+    margin: "0 auto",
+    gap: "18px",
   },
   title: {
-    fontSize: "46px",
-    lineHeight: 1.05,
+    fontSize: "42px",
     fontWeight: 900,
-    letterSpacing: "-0.05em",
     color: "#111",
-    marginBottom: "12px",
+    letterSpacing: "-0.05em",
   },
   subtitle: {
-    color: "#5d6168",
-    fontSize: "16px",
+    color: "#666",
+    fontSize: "14px",
     lineHeight: 1.7,
-    marginBottom: "28px",
   },
   erro: {
     color: "#b00020",
-    marginBottom: "14px",
-    fontSize: "14px",
     fontWeight: 600,
+    fontSize: "14px",
   },
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "14px",
   },
-  inputGroup: {
+  field: {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
   },
   label: {
     fontSize: "13px",
+    color: "#555",
     fontWeight: 700,
-    color: "#444",
   },
   input: {
-    height: "54px",
+    height: "52px",
     borderRadius: "14px",
-    border: "1px solid #ddd6cd",
-    background: "#fff",
-    padding: "0 16px",
-    color: "#111",
+    border: "1px solid #ddd",
+    padding: "0 14px",
+    fontSize: "14px",
     outline: "none",
   },
   primaryButton: {
-    marginTop: "8px",
-    height: "54px",
+    height: "52px",
     borderRadius: "14px",
     border: "none",
-    background: "linear-gradient(135deg, #c91f28 0%, #9f161e 100%)",
+    background: "#ef4637",
     color: "#fff",
     fontWeight: 800,
-    fontSize: "15px",
     cursor: "pointer",
-    boxShadow: "0 12px 24px rgba(201,31,40,0.22)",
+    marginTop: "4px",
   },
-  bottomText: {
-    marginTop: "18px",
-    color: "#666",
-    fontSize: "14px",
-  },
-  inlineLink: {
-    color: "#c91f28",
-    fontWeight: 700,
-  },
-  visualSide: {
-    padding: "22px 22px 22px 0",
-  },
-  visualPanel: {
+  visualSide: (isMobile) => ({
+    display: isMobile ? "none" : "block",
+  }),
+  visualCard: {
     height: "100%",
-    minHeight: "676px",
-    borderRadius: "24px",
+    minHeight: "520px",
+    borderRadius: "22px",
+    background:
+      "linear-gradient(180deg, rgba(18,52,86,0.45), rgba(18,52,86,0.15)), url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80') center/cover",
     position: "relative",
     overflow: "hidden",
-    background:
-      "radial-gradient(circle at top left, rgba(49,95,181,0.40), transparent 28%), radial-gradient(circle at bottom right, rgba(201,31,40,0.28), transparent 30%), linear-gradient(160deg, #0f1720 0%, #0d1117 100%)",
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "flex-start",
-    padding: "34px",
   },
   visualOverlay: {
     position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(to top, rgba(0,0,0,0.35), rgba(0,0,0,0.02))",
-  },
-  visualPole: {
-    position: "absolute",
-    right: "68px",
-    top: "110px",
-    transform: "rotate(16deg)",
-    zIndex: 2,
-    filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.28))",
-  },
-  poleCap: {
-    width: "78px",
-    height: "24px",
-    borderRadius: "999px",
-    background: "#181818",
-  },
-  poleBody: {
-    width: "78px",
-    height: "230px",
-    background: "#f7f7f7",
-    borderLeft: "4px solid #d8d8d8",
-    borderRight: "4px solid #d8d8d8",
-    position: "relative",
-    overflow: "hidden",
-  },
-  poleStripeBlue: {
-    position: "absolute",
-    top: "-18px",
-    left: "8px",
-    width: "20px",
-    height: "270px",
-    background: "#1f4fa3",
-    transform: "skewY(28deg)",
-  },
-  poleStripeRed: {
-    position: "absolute",
-    top: "-8px",
-    left: "29px",
-    width: "20px",
-    height: "270px",
-    background: "#c91f28",
-    transform: "skewY(28deg)",
-  },
-  poleStripeBlue2: {
-    position: "absolute",
-    top: "-18px",
-    left: "50px",
-    width: "20px",
-    height: "270px",
-    background: "#1f4fa3",
-    transform: "skewY(28deg)",
-  },
-  visualTextBox: {
-    position: "relative",
-    zIndex: 2,
-    maxWidth: "360px",
-  },
-  visualMini: {
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.75)",
-    textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    marginBottom: "12px",
-    fontWeight: 700,
+    inset: "auto 24px 24px 24px",
+    color: "#fff",
   },
   visualTitle: {
-    fontSize: "52px",
-    lineHeight: 1.02,
-    letterSpacing: "-0.05em",
-    fontWeight: 900,
-    color: "#fff",
-    marginBottom: "16px",
+    fontSize: "42px",
+    lineHeight: 1.05,
+    fontWeight: 300,
+    marginBottom: "10px",
   },
-  visualDesc: {
-    color: "rgba(255,255,255,0.72)",
-    fontSize: "16px",
+  visualText: {
+    fontSize: "14px",
     lineHeight: 1.7,
+    color: "rgba(255,255,255,0.88)",
+    maxWidth: "420px",
   },
 };
 

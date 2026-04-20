@@ -1,76 +1,67 @@
 import { Link } from "react-router-dom";
+import { useResponsive } from "../hooks/useResponsive";
 
 function Home() {
+  const { isMobile, isTablet } = useResponsive();
+
   return (
     <div style={styles.page}>
-      <div style={styles.shell}>
-        <section style={styles.card}>
-          <header style={styles.header}>
-            <div style={styles.brand}>
-              <div style={styles.brandIcon}>
-                <span style={styles.brandBarberRed}></span>
-                <span style={styles.brandBarberBlue}></span>
-              </div>
-
-              <h2 style={styles.brandTitle}>Lift Barber Registro de Vendas</h2>
+      <div style={styles.heroCard(isMobile)}>
+        <header style={styles.topbar(isMobile)}>
+          <div style={styles.brand}>
+            <div style={styles.brandIcon}>
+              <span style={styles.redStripe}></span>
+              <span style={styles.blueStripe}></span>
             </div>
 
-            <nav style={styles.nav}>
-              <Link to="/login" style={styles.navLink}>
-                Entrar
-              </Link>
+            <div>
+              <p style={styles.brandMini}>Sistema</p>
+              <h2 style={styles.brandTitle}>LiftBarberStore</h2>
+            </div>
+          </div>
 
-              <Link to="/cadastro" style={styles.navButton}>
+          <div style={styles.topActions(isMobile)}>
+            <Link to="/login" style={styles.secondaryLink}>
+              Entrar
+            </Link>
+            <Link to="/register" style={styles.primaryLink}>
+              Criar conta
+            </Link>
+          </div>
+        </header>
+
+        <section
+          style={styles.heroContent(
+            isMobile ? "1fr" : isTablet ? "1fr" : "1.05fr 0.95fr",
+            isMobile
+          )}
+        >
+          <div style={styles.heroLeft}>
+            <span style={styles.heroBadge}>Gestão de vendas com IA</span>
+
+            <h1 style={styles.heroTitle(isMobile)}>
+              Controle sua loja com mais velocidade.
+            </h1>
+
+            <p style={styles.heroText}>
+              Registre vendas, acompanhe a equipe e interprete pedidos com IA
+              em uma interface bonita, rápida e profissional.
+            </p>
+
+            <div style={styles.heroButtons(isMobile)}>
+              <Link to="/register" style={styles.heroPrimary}>
                 Criar conta
               </Link>
-            </nav>
-          </header>
-
-          <div style={styles.hero}>
-            <div style={styles.left}>
-              <span style={styles.badge}>gestão de vendas com IA</span>
-
-              <h1 style={styles.title}>
-                Controle sua loja com mais velocidade.
-              </h1>
-
-              <p style={styles.description}>
-                Registre vendas, acompanhe a equipe e interprete pedidos com IA.
-              </p>
-
-              <div style={styles.actions}>
-                <Link to="/cadastro" style={styles.primaryButton}>
-                  Criar conta
-                </Link>
-
-                <Link to="/login" style={styles.secondaryButton}>
-                  Entrar
-                </Link>
-              </div>
+              <Link to="/login" style={styles.heroSecondary}>
+                Entrar
+              </Link>
             </div>
+          </div>
 
-            <div style={styles.right}>
-              <div style={styles.visualBox}>
-                <div style={styles.glowRed}></div>
-                <div style={styles.glowBlue}></div>
-
-                <div style={styles.centerVisual}>
-                  <div style={styles.pole}>
-                    <div style={styles.poleCap}></div>
-
-                    <div style={styles.poleBody}>
-                      <div style={styles.poleStripeBlue}></div>
-                      <div style={styles.poleStripeRed}></div>
-                      <div style={styles.poleStripeBlue2}></div>
-                    </div>
-
-                    <div style={styles.poleCap}></div>
-                  </div>
-                </div>
-
-                <div style={styles.floatingTagTop}>IA</div>
-                <div style={styles.floatingTagBottom}>Dashboard</div>
-              </div>
+          <div style={styles.heroVisual}>
+            <div style={styles.visualCard}>
+              <div style={styles.pole}></div>
+              <div style={styles.centerStripe}></div>
             </div>
           </div>
         </section>
@@ -83,257 +74,202 @@ const styles = {
   page: {
     minHeight: "100vh",
     background: "linear-gradient(135deg, #0a0a0a 0%, #171717 100%)",
-    padding: "32px",
+    padding: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  shell: {
-    maxWidth: "1400px",
-    margin: "0 auto",
-  },
-  card: {
-    minHeight: "calc(100vh - 64px)",
-    background: "linear-gradient(135deg, #f7f4ef 0%, #f1ebe3 100%)",
-    borderRadius: "28px",
-    boxShadow: "0 24px 60px rgba(0,0,0,0.28)",
-    padding: "30px 34px",
+  heroCard: (isMobile) => ({
+    width: "100%",
+    maxWidth: "1320px",
+    minHeight: isMobile ? "auto" : "92vh",
+    background: "linear-gradient(135deg, #f7f4ef 0%, #efe8df 100%)",
+    borderRadius: "30px",
+    boxShadow: "0 24px 60px rgba(0,0,0,0.30)",
+    padding: isMobile ? "20px" : "28px",
     display: "flex",
     flexDirection: "column",
-  },
-  header: {
+    gap: "28px",
+  }),
+  topbar: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    gap: "16px",
-    flexWrap: "wrap",
-  },
+    alignItems: isMobile ? "flex-start" : "center",
+    flexDirection: isMobile ? "column" : "row",
+    gap: "18px",
+  }),
   brand: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
   },
   brandIcon: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "12px",
+    width: "48px",
+    height: "48px",
+    borderRadius: "14px",
     background: "#111",
     position: "relative",
     overflow: "hidden",
   },
-  brandBarberRed: {
+  redStripe: {
     position: "absolute",
-    left: "10px",
+    left: "12px",
     top: 0,
     width: "8px",
     height: "100%",
     background: "#c91f28",
     transform: "skewX(-18deg)",
   },
-  brandBarberBlue: {
+  blueStripe: {
     position: "absolute",
-    right: "10px",
+    right: "12px",
     top: 0,
     width: "8px",
     height: "100%",
     background: "#1f4fa3",
     transform: "skewX(-18deg)",
   },
+  brandMini: {
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "#7b7b7b",
+    fontWeight: 700,
+    marginBottom: "2px",
+  },
   brandTitle: {
-    color: "#111",
-    fontSize: "22px",
+    fontSize: "18px",
     fontWeight: 800,
-    letterSpacing: "-0.03em",
+    color: "#111",
   },
-  nav: {
+  topActions: (isMobile) => ({
     display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    width: isMobile ? "100%" : "auto",
+  }),
+  secondaryLink: {
+    height: "44px",
+    padding: "0 18px",
+    borderRadius: "999px",
+    background: "#fff",
+    color: "#111",
+    fontWeight: 700,
+    display: "inline-flex",
     alignItems: "center",
-    gap: "12px",
+    justifyContent: "center",
+    border: "1px solid #ddd",
   },
-  navLink: {
-    color: "#1c1c1c",
-    fontSize: "14px",
-    fontWeight: 600,
-    padding: "10px 14px",
-  },
-  navButton: {
-    padding: "12px 18px",
+  primaryLink: {
+    height: "44px",
+    padding: "0 18px",
     borderRadius: "999px",
     background: "#111",
     color: "#fff",
-    fontSize: "14px",
     fontWeight: 700,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  hero: {
-    flex: 1,
+  heroContent: (columns, isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: columns,
     gap: "24px",
     alignItems: "center",
+    flex: 1,
+    minHeight: isMobile ? "auto" : 0,
+  }),
+  heroLeft: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
   },
-  left: {
-    maxWidth: "620px",
-  },
-  badge: {
-    display: "inline-flex",
-    padding: "10px 16px",
+  heroBadge: {
+    width: "fit-content",
+    padding: "8px 12px",
     borderRadius: "999px",
     background: "rgba(201,31,40,0.08)",
-    color: "#8e1118",
-    fontSize: "13px",
-    fontWeight: 700,
+    color: "#c91f28",
+    fontSize: "12px",
+    fontWeight: 800,
+    letterSpacing: "0.04em",
     textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    marginBottom: "22px",
   },
-  title: {
-    color: "#101418",
-    fontSize: "clamp(42px, 6vw, 74px)",
-    lineHeight: 1.02,
+  heroTitle: (isMobile) => ({
+    fontSize: isMobile ? "42px" : "68px",
+    lineHeight: 0.98,
     fontWeight: 900,
-    letterSpacing: "-0.06em",
-    marginBottom: "18px",
-    maxWidth: "720px",
+    letterSpacing: "-0.08em",
+    color: "#111",
+    maxWidth: "700px",
+  }),
+  heroText: {
+    maxWidth: "560px",
+    color: "#666",
+    fontSize: "16px",
+    lineHeight: 1.8,
   },
-  description: {
-    color: "#5d6168",
-    fontSize: "18px",
-    lineHeight: 1.7,
-    maxWidth: "520px",
-    marginBottom: "28px",
-  },
-  actions: {
+  heroButtons: (isMobile) => ({
     display: "flex",
-    gap: "14px",
+    gap: "12px",
     flexWrap: "wrap",
-  },
-  primaryButton: {
-    padding: "15px 24px",
+    width: isMobile ? "100%" : "auto",
+  }),
+  heroPrimary: {
+    minWidth: "140px",
+    height: "52px",
+    padding: "0 20px",
     borderRadius: "999px",
     background: "linear-gradient(135deg, #c91f28 0%, #9f161e 100%)",
     color: "#fff",
     fontWeight: 800,
-    boxShadow: "0 12px 24px rgba(201,31,40,0.22)",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 12px 24px rgba(201,31,40,0.18)",
   },
-  secondaryButton: {
-    padding: "15px 24px",
+  heroSecondary: {
+    minWidth: "120px",
+    height: "52px",
+    padding: "0 20px",
     borderRadius: "999px",
-    background: "#ffffff",
+    background: "#fff",
     color: "#111",
-    fontWeight: 700,
-    border: "1px solid rgba(17,17,17,0.08)",
+    fontWeight: 800,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid #ddd",
   },
-  right: {
+  heroVisual: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
   },
-  visualBox: {
+  visualCard: {
     width: "100%",
-    maxWidth: "520px",
-    minHeight: "500px",
-    borderRadius: "32px",
-    background: "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.95) 0%, #ebe4db 68%, #e4dcd2 100%)",
+    maxWidth: "460px",
+    aspectRatio: "1 / 1",
+    borderRadius: "28px",
+    background: "#f6f0e7",
     position: "relative",
-    overflow: "hidden",
     boxShadow: "inset 0 0 0 1px rgba(17,17,17,0.05)",
-  },
-  glowRed: {
-    position: "absolute",
-    width: "180px",
-    height: "180px",
-    borderRadius: "50%",
-    background: "rgba(201,31,40,0.18)",
-    filter: "blur(48px)",
-    top: "38px",
-    right: "30px",
-  },
-  glowBlue: {
-    position: "absolute",
-    width: "180px",
-    height: "180px",
-    borderRadius: "50%",
-    background: "rgba(31,79,163,0.16)",
-    filter: "blur(48px)",
-    bottom: "34px",
-    left: "24px",
-  },
-  centerVisual: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    overflow: "hidden",
   },
   pole: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    transform: "rotate(18deg)",
-    filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.14))",
-  },
-  poleCap: {
-    width: "84px",
-    height: "28px",
+    position: "absolute",
+    inset: "18% 41%",
     borderRadius: "999px",
-    background: "#181818",
+    background: "#111",
+    transform: "rotate(-28deg)",
   },
-  poleBody: {
-    width: "84px",
-    height: "250px",
-    background: "#f5f5f5",
-    borderLeft: "4px solid #d8d8d8",
-    borderRight: "4px solid #d8d8d8",
-    position: "relative",
-    overflow: "hidden",
-  },
-  poleStripeBlue: {
+  centerStripe: {
     position: "absolute",
-    top: "-20px",
-    left: "8px",
-    width: "22px",
-    height: "290px",
-    background: "#1f4fa3",
-    transform: "skewY(28deg)",
-  },
-  poleStripeRed: {
-    position: "absolute",
-    top: "-10px",
-    left: "30px",
-    width: "22px",
-    height: "290px",
-    background: "#c91f28",
-    transform: "skewY(28deg)",
-  },
-  poleStripeBlue2: {
-    position: "absolute",
-    top: "-20px",
-    left: "52px",
-    width: "22px",
-    height: "290px",
-    background: "#1f4fa3",
-    transform: "skewY(28deg)",
-  },
-  floatingTagTop: {
-    position: "absolute",
-    top: "34px",
-    left: "34px",
-    background: "#fff",
-    color: "#111",
-    padding: "10px 16px",
+    inset: "23% 45%",
+    background:
+      "linear-gradient(180deg, #1f4fa3 0%, #1f4fa3 35%, #fff 35%, #fff 65%, #c91f28 65%, #c91f28 100%)",
+    transform: "rotate(-28deg)",
     borderRadius: "999px",
-    fontSize: "13px",
-    fontWeight: 700,
-    boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
-  },
-  floatingTagBottom: {
-    position: "absolute",
-    bottom: "34px",
-    right: "34px",
-    background: "#fff",
-    color: "#111",
-    padding: "10px 16px",
-    borderRadius: "999px",
-    fontSize: "13px",
-    fontWeight: 700,
-    boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
   },
 };
 
