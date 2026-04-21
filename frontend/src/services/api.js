@@ -18,6 +18,11 @@ api.interceptors.request.use((config) => {
 
 export function getImageUrl(path) {
   if (!path) return null;
+
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+
   return `${API_BASE_URL}${path}`;
 }
 

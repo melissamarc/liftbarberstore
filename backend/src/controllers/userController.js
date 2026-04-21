@@ -1,5 +1,7 @@
 const pool = require("../config/db");
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 
 // LISTAR USUÁRIOS
 async function listarUsuarios(req, res) {
@@ -99,7 +101,10 @@ async function uploadFotoPerfil(req, res) {
       });
     }
 
-    const caminhoArquivo = `/uploads/perfis/${req.file.filename}`;
+    const uploadResult = await uploadToCloudinary(
+      req.file.path,
+      "liftbarberstore/perfis"
+    );
 
     await pool.query(
       `
@@ -107,12 +112,16 @@ async function uploadFotoPerfil(req, res) {
       SET foto_perfil = ?
       WHERE id = ?
       `,
-      [caminhoArquivo, usuarioId]
+      [uploadResult.url, usuarioId]
     );
+
+    if (req.file.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
 
     return res.status(200).json({
       message: "Foto de perfil atualizada com sucesso.",
-      foto_perfil: caminhoArquivo
+      foto_perfil: uploadResult.url
     });
   } catch (error) {
     console.error("Erro ao enviar foto de perfil:", error.message);

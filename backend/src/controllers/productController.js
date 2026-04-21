@@ -1,4 +1,6 @@
 const pool = require("../config/db");
+const fs = require("fs");
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 
 // LISTAR PRODUTOS
 async function listarProdutos(req, res) {
@@ -49,7 +51,20 @@ async function criarProduto(req, res) {
       });
     }
 
-    const fotoProduto = req.file ? `/uploads/produtos/${req.file.filename}` : null;
+    let fotoProduto = null;
+
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(
+        req.file.path,
+        "liftbarberstore/produtos"
+      );
+
+      fotoProduto = uploadResult.url;
+
+      if (req.file.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+    }
 
     await pool.query(
       `INSERT INTO produtos (nome, preco, foto_produto)
@@ -129,9 +144,20 @@ async function atualizarProduto(req, res) {
       });
     }
 
-    const fotoFinal = req.file
-      ? `/uploads/produtos/${req.file.filename}`
-      : produtoAtual.foto_produto;
+    let fotoFinal = produtoAtual.foto_produto;
+
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(
+        req.file.path,
+        "liftbarberstore/produtos"
+      );
+
+      fotoFinal = uploadResult.url;
+
+      if (req.file.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+    }
 
     await pool.query(
       `
