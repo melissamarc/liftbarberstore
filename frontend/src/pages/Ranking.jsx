@@ -543,7 +543,7 @@ const styles = {
     marginBottom: "8px",
   },
   emptyText: {
-    color: "#666",
+    color: "#668",
     fontSize: "14px",
   },
 };
