@@ -16,7 +16,7 @@ async function listarUsuarios(req, res) {
   } catch (error) {
     console.error("Erro ao listar usuários:", error.message);
     return res.status(500).json({
-      message: "Erro ao listar usuários."
+      message: "Erro ao listar usuários.",
     });
   }
 }
@@ -28,7 +28,7 @@ async function criarUsuario(req, res) {
 
     if (!nome || !email || !senha) {
       return res.status(400).json({
-        message: "Nome, email e senha são obrigatórios."
+        message: "Nome, email e senha são obrigatórios.",
       });
     }
 
@@ -39,7 +39,7 @@ async function criarUsuario(req, res) {
 
     if (existe.length > 0) {
       return res.status(400).json({
-        message: "Email já cadastrado."
+        message: "Email já cadastrado.",
       });
     }
 
@@ -52,12 +52,12 @@ async function criarUsuario(req, res) {
     );
 
     return res.status(201).json({
-      message: "Usuário criado com sucesso."
+      message: "Usuário criado com sucesso.",
     });
   } catch (error) {
     console.error("Erro ao criar usuário:", error.message);
     return res.status(500).json({
-      message: "Erro ao criar usuário."
+      message: "Erro ao criar usuário.",
     });
   }
 }
@@ -78,7 +78,7 @@ async function buscarPerfil(req, res) {
 
     if (usuarios.length === 0) {
       return res.status(404).json({
-        message: "Usuário não encontrado."
+        message: "Usuário não encontrado.",
       });
     }
 
@@ -86,18 +86,19 @@ async function buscarPerfil(req, res) {
   } catch (error) {
     console.error("Erro ao buscar perfil:", error.message);
     return res.status(500).json({
-      message: "Erro ao buscar perfil."
+      message: "Erro ao buscar perfil.",
     });
   }
 }
 
+// UPLOAD FOTO DE PERFIL
 async function uploadFotoPerfil(req, res) {
   try {
     const usuarioId = req.usuario.id;
 
     if (!req.file) {
       return res.status(400).json({
-        message: "Nenhum arquivo enviado."
+        message: "Nenhum arquivo enviado.",
       });
     }
 
@@ -121,12 +122,17 @@ async function uploadFotoPerfil(req, res) {
 
     return res.status(200).json({
       message: "Foto de perfil atualizada com sucesso.",
-      foto_perfil: uploadResult.url
+      foto_perfil: uploadResult.url,
     });
   } catch (error) {
     console.error("Erro ao enviar foto de perfil:", error.message);
+
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
     return res.status(500).json({
-      message: "Erro ao enviar foto de perfil."
+      message: "Erro ao enviar foto de perfil.",
     });
   }
 }
