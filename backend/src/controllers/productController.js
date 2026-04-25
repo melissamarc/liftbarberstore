@@ -8,7 +8,7 @@ async function listarProdutos(req, res) {
     const { busca = "" } = req.query;
 
     let query = `
-      SELECT id, nome, preco, foto_produto, ativo, data_criacao
+      SELECT id, nome, preco, preco_custo, foto_produto, ativo, data_criacao
       FROM produtos
     `;
 
@@ -27,7 +27,7 @@ async function listarProdutos(req, res) {
   } catch (error) {
     console.error("Erro ao listar produtos:", error.message);
     return res.status(500).json({
-      message: "Erro ao listar produtos."
+      message: "Erro ao listar produtos.",
     });
   }
 }
@@ -35,19 +35,26 @@ async function listarProdutos(req, res) {
 // CRIAR PRODUTO
 async function criarProduto(req, res) {
   try {
-    const { nome, preco } = req.body;
+    const { nome, preco, preco_custo } = req.body;
 
     if (!nome || preco === undefined || preco === null || preco === "") {
       return res.status(400).json({
-        message: "Nome e preço são obrigatórios."
+        message: "Nome e preço de venda são obrigatórios.",
       });
     }
 
     const precoNumero = Number(preco);
+    const precoCustoNumero = Number(preco_custo || 0);
 
     if (Number.isNaN(precoNumero) || precoNumero <= 0) {
       return res.status(400).json({
-        message: "Preço inválido."
+        message: "Preço de venda inválido.",
+      });
+    }
+
+    if (Number.isNaN(precoCustoNumero) || precoCustoNumero < 0) {
+      return res.status(400).json({
+        message: "Preço de custo inválido.",
       });
     }
 
@@ -67,18 +74,25 @@ async function criarProduto(req, res) {
     }
 
     await pool.query(
-      `INSERT INTO produtos (nome, preco, foto_produto)
-       VALUES (?, ?, ?)`,
-      [nome, precoNumero, fotoProduto]
+      `
+      INSERT INTO produtos (nome, preco, preco_custo, foto_produto)
+      VALUES (?, ?, ?, ?)
+      `,
+      [nome, precoNumero, precoCustoNumero, fotoProduto]
     );
 
     return res.status(201).json({
-      message: "Produto criado com sucesso."
+      message: "Produto criado com sucesso.",
     });
   } catch (error) {
     console.error("Erro ao criar produto:", error.message);
+
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
     return res.status(500).json({
-      message: "Erro ao criar produto."
+      message: "Erro ao criar produto.",
     });
   }
 }
@@ -90,7 +104,7 @@ async function buscarProdutoPorId(req, res) {
 
     const [produtos] = await pool.query(
       `
-      SELECT id, nome, preco, foto_produto, ativo, data_criacao
+      SELECT id, nome, preco, preco_custo, foto_produto, ativo, data_criacao
       FROM produtos
       WHERE id = ?
       `,
@@ -99,7 +113,7 @@ async function buscarProdutoPorId(req, res) {
 
     if (produtos.length === 0) {
       return res.status(404).json({
-        message: "Produto não encontrado."
+        message: "Produto não encontrado.",
       });
     }
 
@@ -107,7 +121,7 @@ async function buscarProdutoPorId(req, res) {
   } catch (error) {
     console.error("Erro ao buscar produto:", error.message);
     return res.status(500).json({
-      message: "Erro ao buscar produto."
+      message: "Erro ao buscar produto.",
     });
   }
 }
@@ -116,23 +130,32 @@ async function buscarProdutoPorId(req, res) {
 async function atualizarProduto(req, res) {
   try {
     const { id } = req.params;
-    const { nome, preco, ativo } = req.body;
+    const { nome, preco, preco_custo, ativo } = req.body;
 
-    const [produtos] = await pool.query(
-      `SELECT * FROM produtos WHERE id = ?`,
-      [id]
-    );
+    const [produtos] = await pool.query(`SELECT * FROM produtos WHERE id = ?`, [
+      id,
+    ]);
 
     if (produtos.length === 0) {
       return res.status(404).json({
-        message: "Produto não encontrado."
+        message: "Produto não encontrado.",
       });
     }
 
     const produtoAtual = produtos[0];
 
     const nomeFinal = nome ?? produtoAtual.nome;
-    const precoFinal = preco !== undefined ? Number(preco) : Number(produtoAtual.preco);
+
+    const precoFinal =
+      preco !== undefined && preco !== ""
+        ? Number(preco)
+        : Number(produtoAtual.preco);
+
+    const precoCustoFinal =
+      preco_custo !== undefined && preco_custo !== ""
+        ? Number(preco_custo)
+        : Number(produtoAtual.preco_custo || 0);
+
     const ativoFinal =
       ativo !== undefined
         ? ativo === true || ativo === "true" || ativo === 1 || ativo === "1"
@@ -140,7 +163,13 @@ async function atualizarProduto(req, res) {
 
     if (!nomeFinal || Number.isNaN(precoFinal) || precoFinal <= 0) {
       return res.status(400).json({
-        message: "Dados inválidos para atualização."
+        message: "Preço de venda inválido.",
+      });
+    }
+
+    if (Number.isNaN(precoCustoFinal) || precoCustoFinal < 0) {
+      return res.status(400).json({
+        message: "Preço de custo inválido.",
       });
     }
 
@@ -162,19 +191,24 @@ async function atualizarProduto(req, res) {
     await pool.query(
       `
       UPDATE produtos
-      SET nome = ?, preco = ?, foto_produto = ?, ativo = ?
+      SET nome = ?, preco = ?, preco_custo = ?, foto_produto = ?, ativo = ?
       WHERE id = ?
       `,
-      [nomeFinal, precoFinal, fotoFinal, ativoFinal, id]
+      [nomeFinal, precoFinal, precoCustoFinal, fotoFinal, ativoFinal, id]
     );
 
     return res.status(200).json({
-      message: "Produto atualizado com sucesso."
+      message: "Produto atualizado com sucesso.",
     });
   } catch (error) {
     console.error("Erro ao atualizar produto:", error.message);
+
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
     return res.status(500).json({
-      message: "Erro ao atualizar produto."
+      message: "Erro ao atualizar produto.",
     });
   }
 }
