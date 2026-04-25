@@ -7,6 +7,12 @@ function NewManualSale() {
   const [produtoId, setProdutoId] = useState("");
   const [quantidade, setQuantidade] = useState(1);
   const [itensVenda, setItensVenda] = useState([]);
+
+  const [clienteNome, setClienteNome] = useState("");
+  const [dataVenda, setDataVenda] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -114,6 +120,8 @@ function NewManualSale() {
       setSalvando(true);
 
       const payload = {
+        cliente_nome: clienteNome,
+        data_venda: dataVenda,
         itens: itensVenda.map((item) => ({
           produto_id: item.produto_id,
           quantidade: item.quantidade,
@@ -126,6 +134,8 @@ function NewManualSale() {
       setItensVenda([]);
       setProdutoId("");
       setQuantidade(1);
+      setClienteNome("");
+      setDataVenda(new Date().toISOString().slice(0, 10));
     } catch (error) {
       setErro(error.response?.data?.message || "Erro ao registrar venda.");
     } finally {
@@ -163,6 +173,27 @@ function NewManualSale() {
             <div style={styles.cardHeader(isMobile)}>
               <h2 style={styles.cardTitle}>Adicionar item</h2>
               <span style={styles.badge}>Manual</span>
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Nome do cliente</label>
+              <input
+                type="text"
+                value={clienteNome}
+                onChange={(e) => setClienteNome(e.target.value)}
+                placeholder="Ex: João Silva"
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Data da venda</label>
+              <input
+                type="date"
+                value={dataVenda}
+                onChange={(e) => setDataVenda(e.target.value)}
+                style={styles.input}
+              />
             </div>
 
             <div style={styles.fieldGroup}>

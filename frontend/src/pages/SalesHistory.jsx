@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import { useResponsive } from "../hooks/useResponsive";
 
@@ -6,45 +6,73 @@ function SalesHistory() {
   const [vendas, setVendas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
-  const [busca, setBusca] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [clienteBusca, setClienteBusca] = useState("");
+  const [dataBusca, setDataBusca] = useState("");
 
-  const { isMobile, isTablet } = useResponsive();
+  const { isMobile } = useResponsive();
+
+  async function carregarHistorico() {
+    try {
+      setLoading(true);
+      setErro("");
+
+      const response = await api.get("/sales", {
+        params: {
+          cliente: clienteBusca,
+          data: dataBusca,
+        },
+      });
+
+      setVendas(response.data);
+    } catch (error) {
+      setErro("Erro ao carregar histórico.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function carregarHistorico() {
-      try {
-        setLoading(true);
-        setErro("");
-
-        const response = await api.get("/sales");
-        setVendas(response.data);
-      } catch (error) {
-        setErro("Erro ao carregar histórico.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
     carregarHistorico();
   }, []);
 
-  const vendasFiltradas = useMemo(() => {
-    if (!busca.trim()) return vendas;
+  async function handleBuscar(e) {
+    e.preventDefault();
+    await carregarHistorico();
+  }
 
-    const termo = busca.toLowerCase();
+  async function limparFiltros() {
+    setClienteBusca("");
+    setDataBusca("");
 
-    return vendas.filter((venda) => {
-      const nome = venda.usuario_nome?.toLowerCase() || "";
-      const origem = venda.origem?.toLowerCase() || "";
-      const texto = venda.texto_original?.toLowerCase() || "";
+    try {
+      setLoading(true);
+      const response = await api.get("/sales");
+      setVendas(response.data);
+    } catch (error) {
+      setErro("Erro ao carregar histórico.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      return (
-        nome.includes(termo) ||
-        origem.includes(termo) ||
-        texto.includes(termo)
-      );
-    });
-  }, [vendas, busca]);
+  async function excluirVenda(id) {
+    const confirmar = window.confirm("Tem certeza que deseja excluir esta venda?");
+
+    if (!confirmar) return;
+
+    try {
+      setErro("");
+      setMensagem("");
+
+      await api.delete(`/sales/${id}`);
+
+      setMensagem("Venda excluída com sucesso.");
+      await carregarHistorico();
+    } catch (error) {
+      setErro(error.response?.data?.message || "Erro ao excluir venda.");
+    }
+  }
 
   if (loading) {
     return <p>Carregando histórico...</p>;
@@ -57,33 +85,51 @@ function SalesHistory() {
           <p style={styles.pageMini}>Vendas</p>
           <h1 style={styles.pageTitle(isMobile)}>Histórico</h1>
           <p style={styles.pageSubtitle}>
-            Visualize as vendas registradas e acompanhe a origem e o total de cada uma.
+            Visualize as vendas registradas e acompanhe cliente, data, origem e total.
           </p>
         </div>
 
         <div style={styles.totalBadge}>
-          {vendasFiltradas.length} {vendasFiltradas.length === 1 ? "venda" : "vendas"}
+          {vendas.length} {vendas.length === 1 ? "venda" : "vendas"}
         </div>
       </header>
 
       {erro && <p style={styles.erro}>{erro}</p>}
+      {mensagem && <p style={styles.sucesso}>{mensagem}</p>}
 
       <section style={styles.tableCard}>
-        <div style={styles.toolbar(isMobile)}>
+        <form onSubmit={handleBuscar} style={styles.toolbar(isMobile)}>
           <div style={styles.searchBox(isMobile)}>
             <span style={styles.searchIcon}>⌕</span>
             <input
               type="text"
-              placeholder="Buscar por vendedor, origem ou mensagem..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nome do cliente..."
+              value={clienteBusca}
+              onChange={(e) => setClienteBusca(e.target.value)}
               style={styles.searchInput}
             />
           </div>
-        </div>
+
+          <div style={styles.dateBox(isMobile)}>
+            <input
+              type="date"
+              value={dataBusca}
+              onChange={(e) => setDataBusca(e.target.value)}
+              style={styles.dateInput}
+            />
+          </div>
+
+          <button type="submit" style={styles.searchButton(isMobile)}>
+            Buscar
+          </button>
+
+          <button type="button" onClick={limparFiltros} style={styles.clearButton(isMobile)}>
+            Limpar
+          </button>
+        </form>
 
         <div style={styles.tableViewport(isMobile)}>
-          {vendasFiltradas.length === 0 ? (
+          {vendas.length === 0 ? (
             <div style={styles.emptyBox}>
               <p style={styles.emptyTitle}>Nenhuma venda encontrada</p>
               <p style={styles.emptyText}>
@@ -92,26 +138,45 @@ function SalesHistory() {
             </div>
           ) : (
             <div style={styles.rows}>
-              {vendasFiltradas.map((venda) => (
+              {vendas.map((venda) => (
                 <div key={venda.id} style={styles.rowCard(isMobile)}>
                   <div style={styles.rowMain}>
                     <div>
-                      <p style={styles.rowName}>{venda.usuario_nome}</p>
+                      <p style={styles.rowName}>
+                        {venda.cliente_nome || "Cliente não informado"}
+                      </p>
+
                       <p style={styles.rowDate}>
-                        {new Date(venda.data_criacao).toLocaleString("pt-BR")}
+                        Vendedor: {venda.usuario_nome}
+                      </p>
+
+                      <p style={styles.rowDate}>
+                        Data da venda:{" "}
+                        {venda.data_venda
+                          ? new Date(venda.data_venda).toLocaleDateString("pt-BR")
+                          : new Date(venda.data_criacao).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
 
-                    <span
-                      style={{
-                        ...styles.originBadge,
-                        ...(venda.origem === "ia"
-                          ? styles.originIA
-                          : styles.originManual),
-                      }}
-                    >
-                      {venda.origem === "ia" ? "Venda com IA" : "Venda manual"}
-                    </span>
+                    <div style={styles.badgeGroup}>
+                      <span
+                        style={{
+                          ...styles.originBadge,
+                          ...(venda.origem === "ia"
+                            ? styles.originIA
+                            : styles.originManual),
+                        }}
+                      >
+                        {venda.origem === "ia" ? "Venda com IA" : "Venda manual"}
+                      </span>
+
+                      <button
+                        onClick={() => excluirVenda(venda.id)}
+                        style={styles.deleteButton}
+                      >
+                        Excluir
+                      </button>
+                    </div>
                   </div>
 
                   <div style={styles.rowMiddle(isMobile)}>
@@ -126,6 +191,13 @@ function SalesHistory() {
                       <span style={styles.infoLabel}>Editada</span>
                       <strong style={styles.infoValue}>
                         {venda.editada ? "Sim" : "Não"}
+                      </strong>
+                    </div>
+
+                    <div style={styles.infoBlock}>
+                      <span style={styles.infoLabel}>Criada em</span>
+                      <strong style={styles.infoValueSmall}>
+                        {new Date(venda.data_criacao).toLocaleString("pt-BR")}
                       </strong>
                     </div>
                   </div>
@@ -194,6 +266,10 @@ const styles = {
     color: "#b00020",
     fontWeight: 600,
   },
+  sucesso: {
+    color: "#0a7d32",
+    fontWeight: 600,
+  },
   tableCard: {
     background: "#fff",
     borderRadius: "24px",
@@ -204,15 +280,13 @@ const styles = {
     gap: "18px",
   },
   toolbar: (isMobile) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "stretch" : "center",
-    flexDirection: isMobile ? "column" : "row",
-    gap: "16px",
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1.4fr 220px auto auto",
+    alignItems: "center",
+    gap: "12px",
   }),
-  searchBox: (isMobile) => ({
+  searchBox: () => ({
     width: "100%",
-    maxWidth: isMobile ? "100%" : "420px",
     height: "52px",
     background: "#f5f2ec",
     borderRadius: "16px",
@@ -236,6 +310,46 @@ const styles = {
     fontSize: "14px",
     color: "#111",
   },
+  dateBox: () => ({
+    width: "100%",
+    height: "52px",
+    background: "#f5f2ec",
+    borderRadius: "16px",
+    display: "flex",
+    alignItems: "center",
+    padding: "0 14px",
+    border: "1px solid #ece5da",
+  }),
+  dateInput: {
+    width: "100%",
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    color: "#111",
+    fontSize: "14px",
+  },
+  searchButton: (isMobile) => ({
+    height: "52px",
+    padding: "0 20px",
+    borderRadius: "14px",
+    border: "none",
+    background: "#111",
+    color: "#fff",
+    fontWeight: 800,
+    cursor: "pointer",
+    width: isMobile ? "100%" : "auto",
+  }),
+  clearButton: (isMobile) => ({
+    height: "52px",
+    padding: "0 20px",
+    borderRadius: "14px",
+    border: "1px solid #ddd",
+    background: "#fff",
+    color: "#111",
+    fontWeight: 800,
+    cursor: "pointer",
+    width: isMobile ? "100%" : "auto",
+  }),
   tableViewport: (isMobile) => ({
     minHeight: 0,
     overflowY: isMobile ? "visible" : "auto",
@@ -246,7 +360,7 @@ const styles = {
     flexDirection: "column",
     gap: "14px",
   },
-  rowCard: (isMobile) => ({
+  rowCard: () => ({
     background: "#f8f6f2",
     borderRadius: "20px",
     padding: "18px",
@@ -271,6 +385,13 @@ const styles = {
   rowDate: {
     color: "#777",
     fontSize: "13px",
+    marginTop: "4px",
+  },
+  badgeGroup: {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    alignItems: "center",
   },
   originBadge: {
     padding: "10px 14px",
@@ -285,6 +406,16 @@ const styles = {
   originManual: {
     background: "rgba(201,31,40,0.10)",
     color: "#c91f28",
+  },
+  deleteButton: {
+    padding: "10px 14px",
+    borderRadius: "999px",
+    border: "none",
+    background: "rgba(176, 0, 32, 0.10)",
+    color: "#b00020",
+    fontSize: "12px",
+    fontWeight: 800,
+    cursor: "pointer",
   },
   rowMiddle: (isMobile) => ({
     display: "flex",
@@ -308,6 +439,11 @@ const styles = {
   },
   infoValue: {
     fontSize: "18px",
+    color: "#111",
+    fontWeight: 800,
+  },
+  infoValueSmall: {
+    fontSize: "14px",
     color: "#111",
     fontWeight: 800,
   },

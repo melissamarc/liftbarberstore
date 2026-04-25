@@ -121,6 +121,46 @@ function Dashboard() {
                 </div>
                 <span style={styles.metricTagBlue}>Período</span>
               </div>
+
+              <div style={styles.metricRow(isMobile)}>
+                <div>
+                  <p style={styles.metricLabel}>Lucro hoje</p>
+                  <strong style={styles.metricValue}>
+                    R$ {Number(resumo?.lucro_hoje || 0).toFixed(2)}
+                  </strong>
+                </div>
+                <span style={styles.metricTagGreen}>Lucro</span>
+              </div>
+
+              <div style={styles.metricRow(isMobile)}>
+                <div>
+                  <p style={styles.metricLabel}>Lucro do mês</p>
+                  <strong style={styles.metricValue}>
+                    R$ {Number(resumo?.lucro_mes || 0).toFixed(2)}
+                  </strong>
+                </div>
+                <span style={styles.metricTagPurple}>Mês</span>
+              </div>
+
+              <div style={styles.metricRow(isMobile)}>
+                <div>
+                  <p style={styles.metricLabel}>Faturamento do mês</p>
+                  <strong style={styles.metricValue}>
+                    R$ {Number(resumo?.faturamento_mes || 0).toFixed(2)}
+                  </strong>
+                </div>
+                <span style={styles.metricTagDark}>Mensal</span>
+              </div>
+
+              <div style={styles.metricRow(isMobile)}>
+                <div>
+                  <p style={styles.metricLabel}>Ticket médio do mês</p>
+                  <strong style={styles.metricValue}>
+                    R$ {Number(resumo?.ticket_medio_mes || 0).toFixed(2)}
+                  </strong>
+                </div>
+                <span style={styles.metricTagBlue}>Médio</span>
+              </div>
             </div>
           </div>
 
@@ -132,16 +172,18 @@ function Dashboard() {
             <div style={styles.smallCard}>
               <div style={styles.smallCardTop}>
                 <div>
-                  <p style={styles.sectionMini}>Hoje</p>
-                  <h3 style={styles.smallTitle}>Quantidade de vendas</h3>
+                  <p style={styles.sectionMini}>Mês atual</p>
+                  <h3 style={styles.smallTitle}>Lucro mensal</h3>
                 </div>
               </div>
 
-              <div style={styles.metricNumber}>
-                {resumo?.quantidade_vendas_hoje || 0}
+              <div style={styles.metricNumberSmall}>
+                R$ {Number(resumo?.lucro_mes || 0).toFixed(2)}
               </div>
 
-              <p style={styles.metricText}>vendas registradas no dia</p>
+              <p style={styles.metricText}>
+                lucro calculado com base no custo e preço de venda dos produtos
+              </p>
             </div>
 
             <div style={styles.wideCard}>
@@ -163,6 +205,9 @@ function Dashboard() {
                           <p style={styles.productName}>{produto.nome}</p>
                           <p style={styles.productMeta}>
                             {produto.total_quantidade_vendida} unidades vendidas
+                          </p>
+                          <p style={styles.productMeta}>
+                            Lucro: R$ {Number(produto.total_lucro || 0).toFixed(2)}
                           </p>
                         </div>
 
@@ -192,7 +237,7 @@ function Dashboard() {
                 <p style={styles.emptyDark}>Nenhum ranking disponível.</p>
               ) : (
                 ranking.map((item) => {
-                 const urlFoto = getImageUrl(item.foto_perfil);
+                  const urlFoto = getImageUrl(item.foto_perfil);
 
                   return (
                     <div key={item.usuario_id} style={styles.rankRow(isMobile)}>
@@ -226,6 +271,32 @@ function Dashboard() {
                   );
                 })
               )}
+            </div>
+
+            <div style={styles.darkDivider}></div>
+
+            <div style={styles.profitBox}>
+              <p style={styles.darkMini}>Maior lucro do mês</p>
+
+              <h3 style={styles.profitTitle}>
+                {resumo?.vendedor_mais_lucrativo?.nome || "Sem dados"}
+              </h3>
+
+              <p style={styles.profitText}>
+                R$ {Number(resumo?.vendedor_mais_lucrativo?.lucro_total || 0).toFixed(2)}
+              </p>
+            </div>
+
+            <div style={styles.profitBox}>
+              <p style={styles.darkMini}>Produto mais lucrativo</p>
+
+              <h3 style={styles.profitTitle}>
+                {resumo?.produto_mais_lucrativo?.nome || "Sem dados"}
+              </h3>
+
+              <p style={styles.profitText}>
+                R$ {Number(resumo?.produto_mais_lucrativo?.lucro_total || 0).toFixed(2)}
+              </p>
             </div>
           </div>
         </div>
@@ -401,6 +472,22 @@ const styles = {
     fontSize: "12px",
     fontWeight: 800,
   },
+  metricTagGreen: {
+    padding: "8px 12px",
+    borderRadius: "999px",
+    background: "rgba(18,130,70,0.15)",
+    color: "#0b7f44",
+    fontSize: "12px",
+    fontWeight: 800,
+  },
+  metricTagPurple: {
+    padding: "8px 12px",
+    borderRadius: "999px",
+    background: "rgba(120,70,255,0.15)",
+    color: "#5d34d6",
+    fontSize: "12px",
+    fontWeight: 800,
+  },
   bottomRow: (columns) => ({
     display: "grid",
     gridTemplateColumns: columns,
@@ -436,6 +523,14 @@ const styles = {
   metricNumber: {
     fontSize: "52px",
     lineHeight: 1,
+    fontWeight: 900,
+    color: "#111",
+    letterSpacing: "-0.06em",
+    marginBottom: "10px",
+  },
+  metricNumberSmall: {
+    fontSize: "32px",
+    lineHeight: 1.1,
     fontWeight: 900,
     color: "#111",
     letterSpacing: "-0.06em",
@@ -573,6 +668,30 @@ const styles = {
     fontWeight: 800,
     color: "#fff",
     whiteSpace: "nowrap",
+  },
+  darkDivider: {
+    width: "100%",
+    height: "1px",
+    background: "rgba(255,255,255,0.08)",
+    margin: "16px 0",
+  },
+  profitBox: {
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: "18px",
+    padding: "14px",
+    marginTop: "10px",
+  },
+  profitTitle: {
+    fontSize: "18px",
+    fontWeight: 800,
+    color: "#fff",
+    marginBottom: "6px",
+  },
+  profitText: {
+    color: "#f1cb3a",
+    fontSize: "15px",
+    fontWeight: 800,
   },
   emptyDark: {
     color: "rgba(255,255,255,0.6)",
