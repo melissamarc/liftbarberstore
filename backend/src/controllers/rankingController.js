@@ -9,15 +9,37 @@ async function rankingVendedores(req, res) {
         u.nome AS usuario_nome,
         u.email AS usuario_email,
         u.foto_perfil,
-        COALESCE(SUM(v.valor_total), 0) AS total_vendido,
-        COUNT(DISTINCT v.id) AS quantidade_vendas,
-        COALESCE(SUM(iv.quantidade), 0) AS quantidade_itens_vendidos
+
+        COALESCE(vendas_resumo.total_vendido, 0) AS total_vendido,
+        COALESCE(vendas_resumo.quantidade_vendas, 0) AS quantidade_vendas,
+        COALESCE(itens_resumo.quantidade_itens_vendidos, 0) AS quantidade_itens_vendidos
+
       FROM usuarios u
-      LEFT JOIN vendas v ON v.usuario_id = u.id
-      LEFT JOIN itens_venda iv ON iv.venda_id = v.id
+
+      LEFT JOIN (
+        SELECT
+          usuario_id,
+          SUM(valor_total) AS total_vendido,
+          COUNT(id) AS quantidade_vendas
+        FROM vendas
+        GROUP BY usuario_id
+      ) vendas_resumo ON vendas_resumo.usuario_id = u.id
+
+      LEFT JOIN (
+        SELECT
+          v.usuario_id,
+          SUM(iv.quantidade) AS quantidade_itens_vendidos
+        FROM vendas v
+        INNER JOIN itens_venda iv ON iv.venda_id = v.id
+        GROUP BY v.usuario_id
+      ) itens_resumo ON itens_resumo.usuario_id = u.id
+
       WHERE u.ativo = TRUE
-      GROUP BY u.id, u.nome, u.email, u.foto_perfil
-      ORDER BY total_vendido DESC, quantidade_vendas DESC, quantidade_itens_vendidos DESC
+
+      ORDER BY 
+        total_vendido DESC, 
+        quantidade_vendas DESC, 
+        quantidade_itens_vendidos DESC
     `);
 
     const rankingFormatado = ranking.map((item, index) => ({
