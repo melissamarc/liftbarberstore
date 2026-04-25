@@ -10,12 +10,14 @@ function Products() {
 
   const [nome, setNome] = useState("");
   const [preco, setPreco] = useState("");
+  const [precoCusto, setPrecoCusto] = useState("");
   const [fotoProduto, setFotoProduto] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
   const [produtoEditando, setProdutoEditando] = useState(null);
   const [editNome, setEditNome] = useState("");
   const [editPreco, setEditPreco] = useState("");
+  const [editPrecoCusto, setEditPrecoCusto] = useState("");
   const [editAtivo, setEditAtivo] = useState(true);
   const [editFoto, setEditFoto] = useState(null);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
@@ -36,7 +38,7 @@ function Products() {
       });
 
       setProdutos(response.data);
-    } catch (error) {
+    } catch {
       setErro("Erro ao carregar produtos.");
     } finally {
       setLoading(false);
@@ -45,7 +47,7 @@ function Products() {
 
   async function handleBuscar(e) {
     e.preventDefault();
-    await carregarProdutos(busca);
+    carregarProdutos(busca);
   }
 
   async function handleCadastrar(e) {
@@ -56,24 +58,23 @@ function Products() {
       setErro("");
 
       const formData = new FormData();
+
       formData.append("nome", nome);
       formData.append("preco", preco);
+      formData.append("preco_custo", precoCusto);
 
       if (fotoProduto) {
         formData.append("foto_produto", fotoProduto);
       }
 
-      await api.post("/products", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await api.post("/products", formData);
 
       setNome("");
       setPreco("");
+      setPrecoCusto("");
       setFotoProduto(null);
 
-      await carregarProdutos(busca);
+      carregarProdutos(busca);
     } catch (error) {
       setErro(error.response?.data?.message || "Erro ao cadastrar produto.");
     } finally {
@@ -85,44 +86,36 @@ function Products() {
     setProdutoEditando(produto);
     setEditNome(produto.nome);
     setEditPreco(produto.preco);
+    setEditPrecoCusto(produto.preco_custo || 0);
     setEditAtivo(Boolean(produto.ativo));
     setEditFoto(null);
   }
 
   function fecharEdicao() {
     setProdutoEditando(null);
-    setEditNome("");
-    setEditPreco("");
-    setEditAtivo(true);
-    setEditFoto(null);
   }
 
   async function salvarEdicao() {
-    if (!produtoEditando) return;
-
     try {
       setSalvandoEdicao(true);
-      setErro("");
 
       const formData = new FormData();
+
       formData.append("nome", editNome);
       formData.append("preco", editPreco);
+      formData.append("preco_custo", editPrecoCusto);
       formData.append("ativo", editAtivo);
 
       if (editFoto) {
         formData.append("foto_produto", editFoto);
       }
 
-      await api.put(`/products/${produtoEditando.id}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await api.put(`/products/${produtoEditando.id}`, formData);
 
-      await carregarProdutos(busca);
       fecharEdicao();
+      carregarProdutos(busca);
     } catch (error) {
-      setErro(error.response?.data?.message || "Erro ao atualizar produto.");
+      setErro(error.response?.data?.message || "Erro ao atualizar.");
     } finally {
       setSalvandoEdicao(false);
     }
@@ -135,7 +128,7 @@ function Products() {
           <p style={styles.pageMini}>Catálogo</p>
           <h1 style={styles.pageTitle(isMobile)}>Produtos</h1>
           <p style={styles.pageSubtitle}>
-            Cadastre, pesquise e atualize os produtos da loja.
+            Cadastre, pesquise e gerencie os produtos.
           </p>
         </div>
       </header>
@@ -144,224 +137,176 @@ function Products() {
 
       <section
         style={styles.board(
-          isMobile ? "1fr" : isTablet ? "1fr" : "300px 1fr",
-          isMobile
+          isMobile ? "1fr" : isTablet ? "1fr" : "330px 1fr"
         )}
       >
-        <aside style={styles.sidebar(isMobile)}>
-          <div style={styles.sidebarBlock}>
-            <p style={styles.sidebarMini}>Resumo</p>
-            <h3 style={styles.sidebarTitle}>{produtos.length} produtos</h3>
-            <p style={styles.sidebarText}>exibidos na listagem atual.</p>
+        <aside style={styles.sidebar}>
+          <div style={styles.sidebarCard}>
+            <p style={styles.smallLabel}>Resumo</p>
+            <h2 style={styles.bigNumber}>{produtos.length}</h2>
+            <p style={styles.smallText}>produtos cadastrados</p>
           </div>
 
-          <div style={styles.sidebarBlock}>
-            <div style={styles.blockHeader(isMobile)}>
-              <h3 style={styles.blockTitle}>Cadastrar produto</h3>
-              <span style={styles.badge}>Admin</span>
-            </div>
+          <div style={styles.sidebarCard}>
+            <h3 style={styles.cardTitle}>Cadastrar produto</h3>
 
             <form onSubmit={handleCadastrar} style={styles.form}>
-              <div style={styles.inputWrap}>
-                <label style={styles.label}>Nome</label>
-                <input
-                  type="text"
-                  placeholder="Ex.: Pomada Modeladora"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  required
-                  style={styles.input}
-                />
-              </div>
+              <input
+                placeholder="Nome do produto"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                style={styles.input}
+              />
 
-              <div style={styles.inputWrap}>
-                <label style={styles.label}>Preço</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex.: 39.90"
-                  value={preco}
-                  onChange={(e) => setPreco(e.target.value)}
-                  required
-                  style={styles.input}
-                />
-              </div>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Preço venda"
+                value={preco}
+                onChange={(e) => setPreco(e.target.value)}
+                style={styles.input}
+              />
 
-              <div style={styles.inputWrap}>
-                <label style={styles.label}>Foto do produto</label>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={(e) => setFotoProduto(e.target.files[0])}
-                  style={styles.fileInput}
-                />
-              </div>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Preço custo"
+                value={precoCusto}
+                onChange={(e) => setPrecoCusto(e.target.value)}
+                style={styles.input}
+              />
 
-              <button
-                type="submit"
-                style={styles.primaryButton}
-                disabled={salvando}
-              >
-                {salvando ? "Salvando..." : "Cadastrar produto"}
+              <input
+                type="file"
+                onChange={(e) => setFotoProduto(e.target.files[0])}
+                style={styles.input}
+              />
+
+              <button style={styles.primaryButton}>
+                {salvando ? "Salvando..." : "Cadastrar"}
               </button>
             </form>
           </div>
         </aside>
 
-        <div style={styles.content(isMobile)}>
-          <div style={styles.toolbar}>
-            <form onSubmit={handleBuscar} style={styles.searchForm(isMobile)}>
-              <span style={styles.searchIcon}>⌕</span>
-              <input
-                type="text"
-                placeholder="Buscar produto pelo nome..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                style={styles.searchInput}
-              />
-              <button type="submit" style={styles.searchButton(isMobile)}>
-                Buscar
-              </button>
-            </form>
-          </div>
+        <div style={styles.content}>
+          <form onSubmit={handleBuscar} style={styles.searchBar}>
+            <input
+              placeholder="Buscar produto..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              style={styles.searchInput}
+            />
 
-          <div style={styles.productsViewport(isMobile)}>
+            <button style={styles.searchButton}>Buscar</button>
+          </form>
+
+          <div style={styles.listArea}>
             {loading ? (
-              <p style={styles.loadingText}>Carregando produtos...</p>
+              <p>Carregando...</p>
             ) : produtos.length === 0 ? (
-              <div style={styles.emptyBox}>
-                <p style={styles.emptyTitle}>Nenhum produto encontrado</p>
-                <p style={styles.emptyText}>
-                  Tente mudar a busca ou cadastrar um novo produto.
-                </p>
-              </div>
+              <p>Nenhum produto encontrado.</p>
             ) : (
-              <div
-                style={styles.grid(
-                  isMobile ? "1fr" : isTablet ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))"
-                )}
-              >
-                {produtos.map((produto) => {
-                  const fotoUrl = getImageUrl(produto.foto_produto);
+              produtos.map((produto) => {
+                const lucro =
+                  Number(produto.preco) -
+                  Number(produto.preco_custo || 0);
 
-                  return (
-                    <div key={produto.id} style={styles.productCard}>
-                      <div style={styles.productImageBox}>
-                        {fotoUrl ? (
-                          <img
-                            src={fotoUrl}
-                            alt={produto.nome}
-                            style={styles.productImage}
-                          />
-                        ) : (
-                          <div style={styles.productImagePlaceholder}>
-                            Sem imagem
-                          </div>
-                        )}
+                return (
+                  <div key={produto.id} style={styles.row}>
+                    <div style={styles.leftInfo}>
+                      {produto.foto_produto ? (
+                        <img
+                          src={getImageUrl(produto.foto_produto)}
+                          alt=""
+                          style={styles.thumb}
+                        />
+                      ) : (
+                        <div style={styles.thumbEmpty}>IMG</div>
+                      )}
 
-                        <span
-                          style={{
-                            ...styles.statusTag,
-                            ...(produto.ativo
-                              ? styles.statusActive
-                              : styles.statusInactive),
-                          }}
-                        >
+                      <div>
+                        <p style={styles.productName}>{produto.nome}</p>
+                        <p style={styles.subText}>
                           {produto.ativo ? "Ativo" : "Inativo"}
-                        </span>
-                      </div>
-
-                      <div style={styles.productBody}>
-                        <div>
-                          <h3 style={styles.productName}>{produto.nome}</h3>
-                          <p style={styles.productCategory}>Produto da loja</p>
-                        </div>
-
-                        <div style={styles.productFooter(isMobile)}>
-                          <div>
-                            <p style={styles.priceLabel}>Preço</p>
-                            <p style={styles.productPrice}>
-                              R$ {Number(produto.preco).toFixed(2)}
-                            </p>
-                          </div>
-
-                          <button
-                            onClick={() => abrirEdicao(produto)}
-                            style={styles.editButton(isMobile)}
-                          >
-                            Editar
-                          </button>
-                        </div>
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    <div style={styles.values}>
+                      <span>Venda: R$ {Number(produto.preco).toFixed(2)}</span>
+                      <span>
+                        Custo: R${" "}
+                        {Number(produto.preco_custo || 0).toFixed(2)}
+                      </span>
+                      <span>
+                        Lucro: R$ {Number(lucro).toFixed(2)}
+                      </span>
+                    </div>
+
+                    <button
+                      style={styles.editButton}
+                      onClick={() => abrirEdicao(produto)}
+                    >
+                      Editar
+                    </button>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
       </section>
 
       {produtoEditando && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal(isMobile)}>
+        <div style={styles.overlay}>
+          <div style={styles.modal}>
             <h2 style={styles.modalTitle}>Editar produto</h2>
 
-            <div style={styles.modalForm}>
-              <div style={styles.inputWrap}>
-                <label style={styles.label}>Nome</label>
-                <input
-                  type="text"
-                  value={editNome}
-                  onChange={(e) => setEditNome(e.target.value)}
-                  style={styles.input}
-                  placeholder="Nome do produto"
-                />
-              </div>
+            <input
+              value={editNome}
+              onChange={(e) => setEditNome(e.target.value)}
+              style={styles.input}
+            />
 
-              <div style={styles.inputWrap}>
-                <label style={styles.label}>Preço</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editPreco}
-                  onChange={(e) => setEditPreco(e.target.value)}
-                  style={styles.input}
-                  placeholder="Preço"
-                />
-              </div>
+            <input
+              type="number"
+              step="0.01"
+              value={editPreco}
+              onChange={(e) => setEditPreco(e.target.value)}
+              style={styles.input}
+            />
 
-              <label style={styles.checkboxRow}>
-                <input
-                  type="checkbox"
-                  checked={editAtivo}
-                  onChange={(e) => setEditAtivo(e.target.checked)}
-                />
-                Produto ativo
-              </label>
+            <input
+              type="number"
+              step="0.01"
+              value={editPrecoCusto}
+              onChange={(e) => setEditPrecoCusto(e.target.value)}
+              style={styles.input}
+            />
 
-              <div style={styles.inputWrap}>
-                <label style={styles.label}>Trocar foto</label>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={(e) => setEditFoto(e.target.files[0])}
-                  style={styles.fileInput}
-                />
-              </div>
-            </div>
+            <label style={styles.checkbox}>
+              <input
+                type="checkbox"
+                checked={editAtivo}
+                onChange={(e) => setEditAtivo(e.target.checked)}
+              />
+              Produto ativo
+            </label>
 
-            <div style={styles.modalActions(isMobile)}>
+            <input
+              type="file"
+              onChange={(e) => setEditFoto(e.target.files[0])}
+              style={styles.input}
+            />
+
+            <div style={styles.modalButtons}>
               <button onClick={fecharEdicao} style={styles.cancelButton}>
                 Cancelar
               </button>
 
-              <button
-                onClick={salvarEdicao}
-                style={styles.primaryButton}
-                disabled={salvandoEdicao}
-              >
-                {salvandoEdicao ? "Salvando..." : "Salvar alterações"}
+              <button onClick={salvarEdicao} style={styles.primaryButton}>
+                {salvandoEdicao ? "Salvando..." : "Salvar"}
               </button>
             </div>
           </div>
@@ -372,375 +317,202 @@ function Products() {
 }
 
 const styles = {
-  page: {
-    width: "100%",
-    minHeight: "100%",
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-  pageHeader: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
-  pageMini: {
-    fontSize: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#7b7b7b",
-    fontWeight: 700,
-  },
-  pageTitle: (isMobile) => ({
-    fontSize: isMobile ? "28px" : "34px",
-    fontWeight: 900,
-    letterSpacing: "-0.05em",
-    color: "#111",
-  }),
-  pageSubtitle: {
-    color: "#666",
-    fontSize: "15px",
-  },
-  erro: {
-    color: "#b00020",
-    fontWeight: 600,
-  },
-  board: (columns, isMobile) => ({
+  page: { display: "flex", flexDirection: "column", gap: 20 },
+  pageHeader: {},
+  pageMini: { fontSize: 12, color: "#888", fontWeight: 700 },
+  pageTitle: () => ({ fontSize: 32, fontWeight: 900 }),
+  pageSubtitle: { color: "#666" },
+  erro: { color: "red" },
+
+  board: (cols) => ({
     display: "grid",
-    gridTemplateColumns: columns,
-    gap: "20px",
-    alignItems: "stretch",
-    height: isMobile ? "auto" : "calc(100vh - 230px)",
-    minHeight: isMobile ? "auto" : "620px",
-    maxHeight: isMobile ? "none" : "620px",
+    gridTemplateColumns: cols,
+    gap: 20,
   }),
-  sidebar: (isMobile) => ({
+
+  sidebar: {
     display: "flex",
     flexDirection: "column",
-    gap: "18px",
-    height: isMobile ? "auto" : "100%",
-  }),
-  sidebarBlock: {
-    background: "#ffffff",
-    borderRadius: "24px",
-    padding: "22px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+    gap: 20,
   },
-  sidebarMini: {
-    fontSize: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#7b7b7b",
-    fontWeight: 700,
-    marginBottom: "8px",
+
+  sidebarCard: {
+    background: "#fff",
+    padding: 22,
+    borderRadius: 22,
   },
-  sidebarTitle: {
-    fontSize: "40px",
-    lineHeight: 1,
-    fontWeight: 900,
-    letterSpacing: "-0.06em",
-    color: "#111",
-    marginBottom: "10px",
-  },
-  sidebarText: {
-    color: "#666",
-    fontSize: "14px",
-    lineHeight: 1.6,
-  },
-  blockHeader: (isMobile) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "flex-start" : "center",
-    flexDirection: isMobile ? "column" : "row",
-    gap: "10px",
-    marginBottom: "18px",
-  }),
-  blockTitle: {
-    fontSize: "20px",
-    fontWeight: 800,
-    color: "#111",
-    letterSpacing: "-0.03em",
-  },
-  badge: {
-    padding: "8px 12px",
-    borderRadius: "999px",
-    background: "rgba(31,79,163,0.10)",
-    color: "#1f4fa3",
-    fontSize: "12px",
-    fontWeight: 800,
-  },
+
+  smallLabel: { fontSize: 12, color: "#888" },
+  bigNumber: { fontSize: 42, fontWeight: 900 },
+  smallText: { color: "#666" },
+
+  cardTitle: { fontSize: 20, fontWeight: 800 },
+
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: 12,
+    marginTop: 14,
   },
-  inputWrap: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  label: {
-    fontSize: "13px",
-    fontWeight: 700,
-    color: "#444",
-  },
+
   input: {
-    height: "52px",
-    borderRadius: "14px",
+    height: 48,
+    borderRadius: 12,
     border: "1px solid #ddd",
     padding: "0 14px",
-    background: "#fff",
-    color: "#111",
-    fontSize: "14px",
   },
-  fileInput: {
-    minHeight: "52px",
-    borderRadius: "14px",
-    border: "1px solid #ddd",
-    padding: "12px",
-    background: "#fff",
-    color: "#111",
-  },
+
   primaryButton: {
-    height: "52px",
-    padding: "0 18px",
-    borderRadius: "14px",
+    height: 48,
     border: "none",
-    background: "linear-gradient(135deg, #c91f28 0%, #9f161e 100%)",
+    borderRadius: 12,
+    background: "#c91f28",
     color: "#fff",
     fontWeight: 800,
     cursor: "pointer",
-    boxShadow: "0 12px 24px rgba(201,31,40,0.18)",
   },
-  content: (isMobile) => ({
-    background: "#ffffff",
-    borderRadius: "24px",
-    padding: "22px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-    display: "flex",
-    flexDirection: "column",
-    minHeight: 0,
-    height: isMobile ? "auto" : "100%",
-    overflow: "hidden",
-  }),
-  toolbar: {
-    marginBottom: "18px",
-    flexShrink: 0,
+
+  content: {
+    background: "#fff",
+    borderRadius: 22,
+    padding: 22,
   },
-  searchForm: (isMobile) => ({
-    minHeight: isMobile ? "auto" : "58px",
-    background: "#f5f2ec",
-    borderRadius: "18px",
+
+  searchBar: {
     display: "grid",
-    gridTemplateColumns: isMobile ? "24px 1fr" : "24px 1fr auto",
-    alignItems: "center",
-    gap: "12px",
-    padding: isMobile ? "14px" : "0 14px",
-    border: "1px solid #ece5da",
-  }),
-  searchIcon: {
-    fontSize: "18px",
-    color: "#7b7b7b",
-    textAlign: "center",
+    gridTemplateColumns: "1fr auto",
+    gap: 12,
+    marginBottom: 18,
   },
+
   searchInput: {
-    height: "100%",
-    minHeight: "42px",
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    fontSize: "15px",
-    color: "#111",
+    height: 48,
+    borderRadius: 12,
+    border: "1px solid #ddd",
+    padding: "0 14px",
   },
-  searchButton: (isMobile) => ({
-    height: "42px",
-    padding: "0 18px",
-    borderRadius: "12px",
+
+  searchButton: {
+    height: 48,
+    padding: "0 20px",
     border: "none",
+    borderRadius: 12,
     background: "#111",
     color: "#fff",
-    fontWeight: 700,
-    cursor: "pointer",
-    gridColumn: isMobile ? "1 / -1" : "auto",
-    width: isMobile ? "100%" : "auto",
-  }),
-  productsViewport: (isMobile) => ({
-    flex: isMobile ? "unset" : 1,
-    minHeight: 0,
-    overflowY: isMobile ? "visible" : "auto",
-    paddingRight: isMobile ? "0" : "4px",
-  }),
-  loadingText: {
-    color: "#666",
-    fontSize: "14px",
-  },
-  emptyBox: {
-    borderRadius: "20px",
-    background: "#f8f6f2",
-    padding: "32px",
-    textAlign: "center",
-  },
-  emptyTitle: {
-    fontSize: "22px",
     fontWeight: 800,
-    color: "#111",
-    marginBottom: "8px",
   },
-  emptyText: {
-    color: "#666",
-    fontSize: "14px",
+
+  listArea: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
   },
-  grid: (columns) => ({
-    display: "grid",
-    gridTemplateColumns: columns,
-    gap: "18px",
-  }),
-  productCard: {
+
+  row: {
     background: "#f8f6f2",
-    borderRadius: "22px",
-    overflow: "hidden",
-    border: "1px solid #eee8df",
+    borderRadius: 18,
+    padding: 14,
+    display: "grid",
+    gridTemplateColumns: "1.2fr 1fr auto",
+    gap: 14,
+    alignItems: "center",
   },
-  productImageBox: {
-    position: "relative",
-    height: "220px",
-    background: "#ece7df",
+
+  leftInfo: {
+    display: "flex",
+    gap: 12,
+    alignItems: "center",
   },
-  productImage: {
-    width: "100%",
-    height: "100%",
+
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
     objectFit: "cover",
   },
-  productImagePlaceholder: {
-    width: "100%",
-    height: "100%",
+
+  thumbEmpty: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    background: "#ddd",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#777",
-    fontWeight: 700,
-    fontSize: "14px",
   },
-  statusTag: {
-    position: "absolute",
-    top: "14px",
-    right: "14px",
-    padding: "8px 12px",
-    borderRadius: "999px",
-    fontSize: "12px",
+
+  productName: {
     fontWeight: 800,
+    fontSize: 15,
   },
-  statusActive: {
-    background: "rgba(18, 130, 70, 0.14)",
-    color: "#0b7f44",
+
+  subText: {
+    fontSize: 13,
+    color: "#666",
   },
-  statusInactive: {
-    background: "rgba(176, 0, 32, 0.12)",
-    color: "#b00020",
-  },
-  productBody: {
-    padding: "18px",
+
+  values: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: 4,
+    fontSize: 13,
   },
-  productName: {
-    fontSize: "20px",
-    lineHeight: 1.2,
-    fontWeight: 800,
-    color: "#111",
-    letterSpacing: "-0.03em",
-    marginBottom: "6px",
-  },
-  productCategory: {
-    color: "#7b7b7b",
-    fontSize: "13px",
-    fontWeight: 600,
-  },
-  productFooter: (isMobile) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "stretch" : "flex-end",
-    gap: "12px",
-    flexDirection: isMobile ? "column" : "row",
-  }),
-  priceLabel: {
-    fontSize: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#7b7b7b",
-    fontWeight: 700,
-    marginBottom: "4px",
-  },
-  productPrice: {
-    fontSize: "24px",
-    fontWeight: 900,
-    color: "#111",
-    letterSpacing: "-0.04em",
-  },
-  editButton: (isMobile) => ({
-    height: "44px",
+
+  editButton: {
+    height: 42,
     padding: "0 18px",
-    borderRadius: "999px",
+    borderRadius: 999,
     border: "none",
     background: "#111",
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
-    whiteSpace: "nowrap",
-    width: isMobile ? "100%" : "auto",
-  }),
-  modalOverlay: {
+  },
+
+  overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.40)",
+    background: "rgba(0,0,0,0.4)",
     display: "flex",
-    justifyContent: "center",
     alignItems: "center",
-    padding: "20px",
-    zIndex: 1000,
+    justifyContent: "center",
+    padding: 20,
   },
-  modal: (isMobile) => ({
+
+  modal: {
     width: "100%",
-    maxWidth: "560px",
+    maxWidth: 500,
     background: "#fff",
-    borderRadius: "24px",
-    padding: isMobile ? "18px" : "24px",
-    boxShadow: "0 24px 60px rgba(0,0,0,0.22)",
-  }),
-  modalTitle: {
-    fontSize: "24px",
-    fontWeight: 800,
-    color: "#111",
-    marginBottom: "18px",
-  },
-  modalForm: {
+    borderRadius: 22,
+    padding: 24,
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: 12,
   },
-  checkboxRow: {
+
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 800,
+  },
+
+  checkbox: {
     display: "flex",
+    gap: 8,
     alignItems: "center",
-    gap: "10px",
-    fontSize: "14px",
-    color: "#333",
   },
-  modalActions: (isMobile) => ({
+
+  modalButtons: {
     display: "flex",
-    justifyContent: "flex-end",
-    gap: "10px",
-    marginTop: "20px",
-    flexDirection: isMobile ? "column" : "row",
-  }),
+    gap: 10,
+    marginTop: 10,
+  },
+
   cancelButton: {
-    height: "50px",
-    padding: "0 18px",
-    borderRadius: "14px",
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
     border: "1px solid #ddd",
     background: "#fff",
-    color: "#111",
-    fontWeight: 700,
     cursor: "pointer",
   },
 };
