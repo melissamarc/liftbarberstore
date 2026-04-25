@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
-
 const {
   criarVendaManual,
   criarVendaIa,
   listarVendas,
   buscarVendaPorId,
-  editarVenda,
+  excluirVenda,
 } = require("../controllers/saleController");
+
 
 const authMiddleware = require("../middlewares/authMiddleware");
 const roleMiddleware = require("../middlewares/roleMiddleware");
@@ -51,5 +51,7 @@ router.put(
   roleMiddleware("admin", "vendedor"),
   editarVenda
 );
+
+router.delete("/:id", authMiddleware, excluirVenda);
 
 module.exports = router;
