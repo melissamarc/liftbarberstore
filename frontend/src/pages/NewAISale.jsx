@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import { useResponsive } from "../hooks/useResponsive";
 
@@ -11,7 +11,49 @@ function NewAISale() {
   const [erro, setErro] = useState("");
   const [mensagemSucesso, setMensagemSucesso] = useState("");
 
+  const [produtos, setProdutos] = useState([]);
+  const [produtoManualId, setProdutoManualId] = useState("");
+  const [quantidadeManual, setQuantidadeManual] = useState(1);
+  const [carregandoProdutos, setCarregandoProdutos] = useState(false);
+
   const { isMobile, isTablet } = useResponsive();
+
+  useEffect(() => {
+    carregarProdutos();
+  }, []);
+
+  async function carregarProdutos() {
+    try {
+      setCarregandoProdutos(true);
+
+      const response = await api.get("/products");
+
+      setProdutos(response.data || []);
+    } catch (error) {
+      setErro("Erro ao carregar produtos.");
+    } finally {
+      setCarregandoProdutos(false);
+    }
+  }
+
+  function calcularTotal(lista) {
+    return lista.reduce((acc, item) => {
+      return acc + Number(item.preco_unitario || 0) * Number(item.quantidade || 0);
+    }, 0);
+  }
+
+  function montarItemPorProduto(produto, quantidade = 1) {
+    const qtd = Number(quantidade) || 1;
+    const preco = Number(produto.preco || 0);
+
+    return {
+      produto_id: produto.id,
+      produto_nome: produto.nome,
+      preco_unitario: preco,
+      quantidade: qtd,
+      subtotal: preco * qtd,
+    };
+  }
 
   async function interpretarMensagem() {
     try {
@@ -23,8 +65,23 @@ function NewAISale() {
         mensagem,
       });
 
-      setItens(response.data.itens_encontrados || []);
-      setValorTotal(response.data.valor_total || 0);
+      const itensEncontrados = response.data.itens_encontrados || [];
+
+      const itensNormalizados = itensEncontrados.map((item) => {
+        const quantidade = Number(item.quantidade || 1);
+        const precoUnitario = Number(item.preco_unitario || 0);
+
+        return {
+          produto_id: item.produto_id,
+          produto_nome: item.produto_nome,
+          preco_unitario: precoUnitario,
+          quantidade,
+          subtotal: precoUnitario * quantidade,
+        };
+      });
+
+      setItens(itensNormalizados);
+      setValorTotal(calcularTotal(itensNormalizados));
     } catch (error) {
       setErro("Erro ao interpretar mensagem.");
     } finally {
@@ -32,31 +89,77 @@ function NewAISale() {
     }
   }
 
+  function alterarProduto(index, produtoId) {
+    const produto = produtos.find((item) => String(item.id) === String(produtoId));
+
+    if (!produto) return;
+
+    const itensAtualizados = [...itens];
+    const quantidadeAtual = itensAtualizados[index].quantidade || 1;
+
+    itensAtualizados[index] = montarItemPorProduto(produto, quantidadeAtual);
+
+    setItens(itensAtualizados);
+    setValorTotal(calcularTotal(itensAtualizados));
+  }
+
   function alterarQuantidade(index, novaQuantidade) {
     const quantidade = Number(novaQuantidade) || 1;
 
     const itensAtualizados = [...itens];
+
     itensAtualizados[index].quantidade = quantidade;
     itensAtualizados[index].subtotal =
-      itensAtualizados[index].preco_unitario * quantidade;
-
-    const novoTotal = itensAtualizados.reduce((acc, item) => {
-      return acc + item.preco_unitario * item.quantidade;
-    }, 0);
+      Number(itensAtualizados[index].preco_unitario || 0) * quantidade;
 
     setItens(itensAtualizados);
-    setValorTotal(novoTotal);
+    setValorTotal(calcularTotal(itensAtualizados));
   }
 
   function removerItem(index) {
     const itensAtualizados = itens.filter((_, i) => i !== index);
 
-    const novoTotal = itensAtualizados.reduce((acc, item) => {
-      return acc + item.preco_unitario * item.quantidade;
-    }, 0);
+    setItens(itensAtualizados);
+    setValorTotal(calcularTotal(itensAtualizados));
+  }
+
+  function adicionarProdutoManual() {
+    const produto = produtos.find(
+      (item) => String(item.id) === String(produtoManualId)
+    );
+
+    if (!produto) {
+      setErro("Selecione um produto para adicionar.");
+      return;
+    }
+
+    const quantidade = Number(quantidadeManual) || 1;
+
+    const itemExistenteIndex = itens.findIndex(
+      (item) => String(item.produto_id) === String(produto.id)
+    );
+
+    let itensAtualizados;
+
+    if (itemExistenteIndex >= 0) {
+      itensAtualizados = [...itens];
+
+      const novaQuantidade =
+        Number(itensAtualizados[itemExistenteIndex].quantidade || 0) + quantidade;
+
+      itensAtualizados[itemExistenteIndex] = montarItemPorProduto(
+        produto,
+        novaQuantidade
+      );
+    } else {
+      itensAtualizados = [...itens, montarItemPorProduto(produto, quantidade)];
+    }
 
     setItens(itensAtualizados);
-    setValorTotal(novoTotal);
+    setValorTotal(calcularTotal(itensAtualizados));
+    setProdutoManualId("");
+    setQuantidadeManual(1);
+    setErro("");
   }
 
   async function confirmarVenda() {
@@ -83,6 +186,8 @@ function NewAISale() {
       setMensagem("");
       setItens([]);
       setValorTotal(0);
+      setProdutoManualId("");
+      setQuantidadeManual(1);
     } catch (error) {
       setErro(error.response?.data?.message || "Erro ao salvar venda.");
     } finally {
@@ -116,7 +221,7 @@ function NewAISale() {
             <p style={styles.darkMini}>Assistente</p>
             <h3 style={styles.darkTitle}>Interpretação inteligente</h3>
             <p style={styles.darkText}>
-              A IA lê a mensagem, sugere os produtos do catálogo e você só revisa.
+              A IA lê a mensagem, sugere os produtos do catálogo e você revisa antes de salvar.
             </p>
           </div>
 
@@ -124,7 +229,7 @@ function NewAISale() {
             <p style={styles.summaryMini}>Resumo</p>
             <h3 style={styles.summaryValue}>R$ {valorTotal.toFixed(2)}</h3>
             <p style={styles.summaryText}>
-              {itens.length} {itens.length === 1 ? "item sugerido" : "itens sugeridos"}
+              {itens.length} {itens.length === 1 ? "item na venda" : "itens na venda"}
             </p>
 
             <button
@@ -155,13 +260,13 @@ function NewAISale() {
               </div>
             )}
 
-            {itens.length > 0 && (
-              <div style={styles.messageAssistant}>
-                <div style={styles.resultBox}>
-                  <div style={styles.resultHeader}>
-                    <h3 style={styles.resultTitle}>Itens encontrados</h3>
-                  </div>
+            <div style={styles.messageAssistant}>
+              <div style={styles.resultBox}>
+                <div style={styles.resultHeader}>
+                  <h3 style={styles.resultTitle}>Itens da venda</h3>
+                </div>
 
+                {itens.length > 0 && (
                   <div style={styles.resultList}>
                     {itens.map((item, index) => (
                       <div key={index} style={styles.resultItem(isMobile)}>
@@ -177,15 +282,30 @@ function NewAISale() {
                         </div>
 
                         <div style={styles.resultItemRight(isMobile)}>
+                          <div style={styles.productSelectBox}>
+                            <label style={styles.qtyLabel}>Produto</label>
+                            <select
+                              value={item.produto_id || ""}
+                              onChange={(e) => alterarProduto(index, e.target.value)}
+                              style={styles.productSelect}
+                            >
+                              <option value="">Selecione</option>
+
+                              {produtos.map((produto) => (
+                                <option key={produto.id} value={produto.id}>
+                                  {produto.nome} - R$ {Number(produto.preco).toFixed(2)}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
                           <div style={styles.quantityBox}>
                             <label style={styles.qtyLabel}>Qtd.</label>
                             <input
                               type="number"
                               min="1"
                               value={item.quantidade}
-                              onChange={(e) =>
-                                alterarQuantidade(index, e.target.value)
-                              }
+                              onChange={(e) => alterarQuantidade(index, e.target.value)}
                               style={styles.qtyInput}
                             />
                           </div>
@@ -207,9 +327,56 @@ function NewAISale() {
                       </div>
                     ))}
                   </div>
+                )}
+
+                {itens.length === 0 && (
+                  <p style={styles.emptyText}>
+                    Nenhum item adicionado ainda. Use a IA ou adicione manualmente.
+                  </p>
+                )}
+
+                <div style={styles.manualAddBox}>
+                  <div style={styles.manualFields}>
+                    <div style={styles.productSelectBox}>
+                      <label style={styles.qtyLabel}>Adicionar produto</label>
+                      <select
+                        value={produtoManualId}
+                        onChange={(e) => setProdutoManualId(e.target.value)}
+                        style={styles.productSelect}
+                        disabled={carregandoProdutos}
+                      >
+                        <option value="">
+                          {carregandoProdutos
+                            ? "Carregando produtos..."
+                            : "Selecione um produto"}
+                        </option>
+
+                        {produtos.map((produto) => (
+                          <option key={produto.id} value={produto.id}>
+                            {produto.nome} - R$ {Number(produto.preco).toFixed(2)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={styles.quantityBox}>
+                      <label style={styles.qtyLabel}>Qtd.</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={quantidadeManual}
+                        onChange={(e) => setQuantidadeManual(e.target.value)}
+                        style={styles.qtyInput}
+                      />
+                    </div>
+                  </div>
+
+                  <button onClick={adicionarProdutoManual} style={styles.addManualButton}>
+                    Adicionar à venda
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           <div style={styles.chatInputArea(isMobile)}>
@@ -220,7 +387,11 @@ function NewAISale() {
               style={styles.textarea}
             />
 
-            <button onClick={interpretarMensagem} style={styles.primaryButton(isMobile)}>
+            <button
+              onClick={interpretarMensagem}
+              disabled={loading || !mensagem.trim()}
+              style={styles.primaryButton(isMobile)}
+            >
               {loading ? "Interpretando..." : "Interpretar mensagem"}
             </button>
           </div>
@@ -450,6 +621,7 @@ const styles = {
     justifyContent: "center",
     fontWeight: 800,
     fontSize: "13px",
+    flexShrink: 0,
   },
   resultName: {
     fontSize: "18px",
@@ -462,13 +634,35 @@ const styles = {
     fontSize: "13px",
   },
   resultItemRight: (isMobile) => ({
-    display: "flex",
-    alignItems: isMobile ? "stretch" : "center",
-    gap: "14px",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    flexDirection: isMobile ? "column" : "row",
-  }),
+  display: "flex",
+  alignItems: isMobile ? "stretch" : "center",
+  gap: "10px",
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
+  flexDirection: isMobile ? "column" : "row",
+  maxWidth: isMobile ? "100%" : "560px",
+}),
+
+  productSelectBox: {
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  width: "180px",
+  maxWidth: "100%",
+},
+
+productSelect: {
+  width: "100%",
+  height: "42px",
+  borderRadius: "12px",
+  border: "1px solid #ddd",
+  padding: "0 8px",
+  background: "#fff",
+  color: "#111",
+  fontWeight: 600,
+  fontSize: "13px",
+},
+
   quantityBox: {
     display: "flex",
     flexDirection: "column",
@@ -516,6 +710,39 @@ const styles = {
     cursor: "pointer",
     width: isMobile ? "100%" : "auto",
   }),
+  emptyText: {
+    color: "#666",
+    fontSize: "14px",
+    lineHeight: 1.6,
+  },
+  manualAddBox: {
+    marginTop: "16px",
+    padding: "16px",
+    borderRadius: "18px",
+    background: "#fff",
+    border: "1px dashed #d8d0c4",
+    display: "flex",
+    alignItems: "end",
+    justifyContent: "space-between",
+    gap: "14px",
+    flexWrap: "wrap",
+  },
+  manualFields: {
+    display: "flex",
+    alignItems: "end",
+    gap: "14px",
+    flexWrap: "wrap",
+  },
+  addManualButton: {
+    height: "42px",
+    padding: "0 16px",
+    borderRadius: "12px",
+    border: "none",
+    background: "#1f4fa3",
+    color: "#fff",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
   chatInputArea: (isMobile) => ({
     padding: "18px 22px 22px 22px",
     borderTop: "1px solid #eee8df",

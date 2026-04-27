@@ -4,7 +4,8 @@ import { useResponsive } from "../hooks/useResponsive";
 
 function NewManualSale() {
   const [produtos, setProdutos] = useState([]);
-  const [produtoId, setProdutoId] = useState("");
+  const [buscaProduto, setBuscaProduto] = useState("");
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const [quantidade, setQuantidade] = useState(1);
   const [itensVenda, setItensVenda] = useState([]);
 
@@ -36,11 +37,28 @@ function NewManualSale() {
     carregarProdutos();
   }, []);
 
+  const produtosFiltrados = useMemo(() => {
+    if (!buscaProduto.trim()) return produtos.slice(0, 6);
+
+    return produtos
+      .filter((produto) =>
+        produto.nome.toLowerCase().includes(buscaProduto.toLowerCase())
+      )
+      .slice(0, 8);
+  }, [produtos, buscaProduto]);
+
+  function selecionarProduto(produto) {
+    setProdutoSelecionado(produto);
+    setBuscaProduto(produto.nome);
+    setErro("");
+    setMensagem("");
+  }
+
   function adicionarItem() {
     setErro("");
     setMensagem("");
 
-    if (!produtoId) {
+    if (!produtoSelecionado) {
       setErro("Selecione um produto.");
       return;
     }
@@ -52,32 +70,18 @@ function NewManualSale() {
       return;
     }
 
-    const produtoSelecionado = produtos.find(
-      (produto) => Number(produto.id) === Number(produtoId)
-    );
-
-    if (!produtoSelecionado) {
-      setErro("Produto não encontrado.");
-      return;
-    }
-
     const itemExistente = itensVenda.find(
       (item) => Number(item.produto_id) === Number(produtoSelecionado.id)
     );
 
     if (itemExistente) {
-      const itensAtualizados = itensVenda.map((item) => {
-        if (Number(item.produto_id) === Number(produtoSelecionado.id)) {
-          return {
-            ...item,
-            quantidade: item.quantidade + quantidadeNumero,
-          };
-        }
-
-        return item;
-      });
-
-      setItensVenda(itensAtualizados);
+      setItensVenda((prev) =>
+        prev.map((item) =>
+          Number(item.produto_id) === Number(produtoSelecionado.id)
+            ? { ...item, quantidade: item.quantidade + quantidadeNumero }
+            : item
+        )
+      );
     } else {
       setItensVenda((prev) => [
         ...prev,
@@ -91,7 +95,8 @@ function NewManualSale() {
       ]);
     }
 
-    setProdutoId("");
+    setProdutoSelecionado(null);
+    setBuscaProduto("");
     setQuantidade(1);
   }
 
@@ -132,7 +137,8 @@ function NewManualSale() {
 
       setMensagem("Venda registrada com sucesso.");
       setItensVenda([]);
-      setProdutoId("");
+      setProdutoSelecionado(null);
+      setBuscaProduto("");
       setQuantidade(1);
       setClienteNome("");
       setDataVenda(new Date().toISOString().slice(0, 10));
@@ -164,7 +170,7 @@ function NewManualSale() {
 
       <section
         style={styles.board(
-          isMobile ? "1fr" : isTablet ? "1fr" : "320px 1fr",
+          isMobile ? "1fr" : isTablet ? "1fr" : "340px 1fr",
           isMobile
         )}
       >
@@ -197,19 +203,62 @@ function NewManualSale() {
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Produto</label>
-              <select
-                value={produtoId}
-                onChange={(e) => setProdutoId(e.target.value)}
+              <label style={styles.label}>Buscar produto</label>
+              <input
+                type="text"
+                value={buscaProduto}
+                onChange={(e) => {
+                  setBuscaProduto(e.target.value);
+                  setProdutoSelecionado(null);
+                }}
+                placeholder="Digite o nome do produto..."
                 style={styles.input}
-              >
-                <option value="">Selecione um produto</option>
-                {produtos.map((produto) => (
-                  <option key={produto.id} value={produto.id}>
-                    {produto.nome} — R$ {Number(produto.preco).toFixed(2)}
-                  </option>
-                ))}
-              </select>
+              />
+
+              {buscaProduto && (
+                <div style={styles.productSearchList}>
+                  {produtosFiltrados.length === 0 ? (
+                    <p style={styles.noProducts}>Nenhum produto encontrado.</p>
+                  ) : (
+                    produtosFiltrados.map((produto) => {
+                      const fotoUrl = getImageUrl(produto.foto_produto);
+
+                      return (
+                        <button
+                          key={produto.id}
+                          type="button"
+                          onClick={() => selecionarProduto(produto)}
+                          style={{
+                            ...styles.productOption,
+                            ...(produtoSelecionado?.id === produto.id
+                              ? styles.productOptionActive
+                              : {}),
+                          }}
+                        >
+                          {fotoUrl ? (
+                            <img
+                              src={fotoUrl}
+                              alt={produto.nome}
+                              style={styles.productOptionImage}
+                            />
+                          ) : (
+                            <div style={styles.productOptionImageEmpty}>IMG</div>
+                          )}
+
+                          <div style={styles.productOptionInfo}>
+                            <strong style={styles.productOptionName}>
+                              {produto.nome}
+                            </strong>
+                            <span style={styles.productOptionPrice}>
+                              R$ {Number(produto.preco).toFixed(2)}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
 
             <div style={styles.fieldGroup}>
@@ -255,7 +304,7 @@ function NewManualSale() {
               <div style={styles.emptyState}>
                 <p style={styles.emptyTitle}>Nenhum item adicionado</p>
                 <p style={styles.emptyText}>
-                  Escolha um produto ao lado e monte a venda.
+                  Busque um produto ao lado e monte a venda.
                 </p>
               </div>
             ) : (
@@ -456,6 +505,72 @@ const styles = {
     background: "#fff",
     color: "#111",
     fontSize: "14px",
+  },
+  productSearchList: {
+    maxHeight: "260px",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    marginTop: "4px",
+  },
+  productOption: {
+    width: "100%",
+    border: "1px solid #eee8df",
+    background: "#f8f6f2",
+    borderRadius: "16px",
+    padding: "10px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    cursor: "pointer",
+    textAlign: "left",
+  },
+  productOptionActive: {
+    border: "1px solid #1f4fa3",
+    background: "rgba(31,79,163,0.08)",
+  },
+  productOptionImage: {
+    width: "44px",
+    height: "44px",
+    borderRadius: "12px",
+    objectFit: "cover",
+    flexShrink: 0,
+  },
+  productOptionImageEmpty: {
+    width: "44px",
+    height: "44px",
+    borderRadius: "12px",
+    background: "#ece7df",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#777",
+    fontSize: "10px",
+    fontWeight: 800,
+    flexShrink: 0,
+  },
+  productOptionInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "3px",
+    minWidth: 0,
+  },
+  productOptionName: {
+    fontSize: "13px",
+    color: "#111",
+    fontWeight: 800,
+  },
+  productOptionPrice: {
+    fontSize: "12px",
+    color: "#666",
+  },
+  noProducts: {
+    fontSize: "13px",
+    color: "#777",
+    background: "#f8f6f2",
+    padding: "12px",
+    borderRadius: "14px",
   },
   primaryButton: {
     width: "100%",
