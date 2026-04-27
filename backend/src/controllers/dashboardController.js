@@ -29,13 +29,20 @@ async function resumoDashboard(req, res) {
         AND v.data_criacao < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
     `);
 
+    const [faturamentoMesResult] = await pool.query(`
+      SELECT
+        COALESCE(SUM(valor_total), 0) AS faturamento_mes,
+        COUNT(*) AS quantidade_vendas_mes
+      FROM vendas
+      WHERE data_criacao >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        AND data_criacao < DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY)
+    `);
+
     const [lucroMesResult] = await pool.query(`
       SELECT
-        COALESCE(SUM(iv.lucro), 0) AS lucro_mes,
-        COALESCE(SUM(v.valor_total), 0) AS faturamento_mes,
-        COUNT(DISTINCT v.id) AS quantidade_vendas_mes
-      FROM vendas v
-      LEFT JOIN itens_venda iv ON iv.venda_id = v.id
+        COALESCE(SUM(iv.lucro), 0) AS lucro_mes
+      FROM itens_venda iv
+      INNER JOIN vendas v ON v.id = iv.venda_id
       WHERE v.data_criacao >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
         AND v.data_criacao < DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY)
     `);
@@ -76,12 +83,13 @@ async function resumoDashboard(req, res) {
     const vendasHoje = vendasHojeResult[0];
     const vendasSemana = vendasSemanaResult[0];
     const lucroHoje = lucroHojeResult[0];
+    const faturamentoMes = faturamentoMesResult[0];
     const lucroMes = lucroMesResult[0];
 
-    const faturamentoMes = Number(lucroMes.faturamento_mes);
-    const quantidadeVendasMes = Number(lucroMes.quantidade_vendas_mes);
+    const faturamentoMesNumero = Number(faturamentoMes.faturamento_mes);
+    const quantidadeVendasMes = Number(faturamentoMes.quantidade_vendas_mes);
     const ticketMedioMes =
-      quantidadeVendasMes > 0 ? faturamentoMes / quantidadeVendasMes : 0;
+      quantidadeVendasMes > 0 ? faturamentoMesNumero / quantidadeVendasMes : 0;
 
     return res.status(200).json({
       total_vendido_hoje: Number(vendasHoje.total_vendido_hoje),
@@ -92,7 +100,7 @@ async function resumoDashboard(req, res) {
 
       lucro_hoje: Number(lucroHoje.lucro_hoje),
       lucro_mes: Number(lucroMes.lucro_mes),
-      faturamento_mes: faturamentoMes,
+      faturamento_mes: faturamentoMesNumero,
       quantidade_vendas_mes: quantidadeVendasMes,
       ticket_medio_mes: ticketMedioMes,
 
@@ -102,7 +110,7 @@ async function resumoDashboard(req, res) {
   } catch (error) {
     console.error("Erro ao carregar resumo do dashboard:", error.message);
     return res.status(500).json({
-      message: "Erro ao carregar resumo do dashboard."
+      message: "Erro ao carregar resumo do dashboard.",
     });
   }
 }
@@ -129,7 +137,7 @@ async function topProdutos(req, res) {
   } catch (error) {
     console.error("Erro ao carregar produtos mais vendidos:", error.message);
     return res.status(500).json({
-      message: "Erro ao carregar produtos mais vendidos."
+      message: "Erro ao carregar produtos mais vendidos.",
     });
   }
 }
