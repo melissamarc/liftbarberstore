@@ -242,9 +242,19 @@ async function listarVendas(req, res) {
         v.editada,
         v.editada_em,
         v.editada_por,
-        v.data_criacao
+        v.data_criacao,
+        iv.id AS item_id,
+        iv.produto_id,
+        p.nome AS produto_nome,
+        iv.quantidade,
+        iv.preco_unitario,
+        iv.custo_unitario,
+        iv.subtotal,
+        iv.lucro
       FROM vendas v
       INNER JOIN usuarios u ON u.id = v.usuario_id
+      LEFT JOIN itens_venda iv ON iv.venda_id = v.id
+      LEFT JOIN produtos p ON p.id = iv.produto_id
       WHERE 1 = 1
     `;
 
@@ -260,11 +270,47 @@ async function listarVendas(req, res) {
       params.push(data.trim());
     }
 
-    query += ` ORDER BY v.id DESC`;
+    query += ` ORDER BY v.id DESC, iv.id ASC`;
 
-    const [vendas] = await pool.query(query, params);
+    const [rows] = await pool.query(query, params);
 
-    return res.status(200).json(vendas);
+    const vendasMap = new Map();
+
+    for (const row of rows) {
+      if (!vendasMap.has(row.id)) {
+        vendasMap.set(row.id, {
+          id: row.id,
+          usuario_id: row.usuario_id,
+          usuario_nome: row.usuario_nome,
+          usuario_email: row.usuario_email,
+          cliente_nome: row.cliente_nome,
+          data_venda: row.data_venda,
+          valor_total: row.valor_total,
+          origem: row.origem,
+          texto_original: row.texto_original,
+          editada: row.editada,
+          editada_em: row.editada_em,
+          editada_por: row.editada_por,
+          data_criacao: row.data_criacao,
+          itens: [],
+        });
+      }
+
+      if (row.item_id) {
+        vendasMap.get(row.id).itens.push({
+          id: row.item_id,
+          produto_id: row.produto_id,
+          produto_nome: row.produto_nome,
+          quantidade: row.quantidade,
+          preco_unitario: row.preco_unitario,
+          custo_unitario: row.custo_unitario,
+          subtotal: row.subtotal,
+          lucro: row.lucro,
+        });
+      }
+    }
+
+    return res.status(200).json(Array.from(vendasMap.values()));
   } catch (error) {
     console.error("Erro ao listar vendas:", error.message);
     return res.status(500).json({
@@ -272,6 +318,7 @@ async function listarVendas(req, res) {
     });
   }
 }
+
 
 // BUSCAR VENDA POR ID
 async function buscarVendaPorId(req, res) {

@@ -74,6 +74,174 @@ function SalesHistory() {
     }
   }
 
+  function formatarMoeda(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  function gerarNumeroPedido(venda) {
+    return String(venda.id).padStart(9, "0");
+  }
+
+  function escaparHtml(valor) {
+    return String(valor || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function montarHtmlPedido(venda) {
+    const itens = venda.itens || [];
+    const subtotal = itens.reduce((acc, item) => {
+      return acc + Number(item.subtotal || 0);
+    }, 0);
+
+    const cupom = Number(venda.valor_cupom || 0);
+    const desconto = Number(venda.desconto || 0);
+    const frete = Number(venda.frete || 0);
+    const total = Number(venda.valor_total || subtotal);
+
+    const produtosHtml =
+      itens.length > 0
+        ? itens
+            .map((item) => {
+              const quantidade = Number(item.quantidade || 1);
+              const nome = escaparHtml(item.produto_nome || "Produto");
+              const valorItem =
+                Number(item.subtotal) ||
+                Number(item.preco_unitario || 0) * quantidade;
+
+              return `<p>${quantidade}x ${nome} = ${formatarMoeda(valorItem)}</p>`;
+            })
+            .join("")
+        : `<p>Produtos não disponíveis.</p>`;
+
+    return `
+      <section class="pedido">
+        <h1>PEDIDO - ${gerarNumeroPedido(venda)}</h1>
+
+        <h2>Produtos</h2>
+        ${produtosHtml}
+
+        <div class="totais">
+          <p>Subtotal: ${formatarMoeda(subtotal || total)}</p>
+          <p>Cupom: ${formatarMoeda(cupom)}</p>
+          <p>Desconto: ${formatarMoeda(desconto)}</p>
+          <p>Frete: ${formatarMoeda(frete)}</p>
+          <p class="total">Total: ${formatarMoeda(total)}</p>
+        </div>
+
+        <h2>Cliente</h2>
+        <p>Nome: ${escaparHtml(venda.cliente_nome || "Cliente não informado")}</p>
+      </section>
+    `;
+  }
+
+  function imprimirVendas(listaVendas) {
+    if (!listaVendas || listaVendas.length === 0) {
+      setErro("Nenhuma venda para exportar.");
+      return;
+    }
+
+    const conteudo = listaVendas.map(montarHtmlPedido).join("");
+    const janela = window.open("", "_blank");
+
+    if (!janela) {
+      setErro("Não foi possível abrir a janela de impressão.");
+      return;
+    }
+
+    janela.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Pedidos</title>
+          <style>
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: Arial, sans-serif;
+              color: #111;
+              margin: 0;
+              padding: 32px;
+              background: #fff;
+            }
+
+            .pedido {
+              width: 100%;
+              max-width: 720px;
+              margin: 0 auto;
+              padding-bottom: 36px;
+              page-break-after: always;
+            }
+
+            .pedido:last-child {
+              page-break-after: auto;
+            }
+
+            h1 {
+              font-size: 22px;
+              margin: 0 0 24px;
+              font-weight: 800;
+            }
+
+            h2 {
+              font-size: 17px;
+              margin: 22px 0 10px;
+              font-weight: 800;
+            }
+
+            p {
+              font-size: 15px;
+              line-height: 1.5;
+              margin: 4px 0;
+            }
+
+            .totais {
+              margin-top: 18px;
+            }
+
+            .total {
+              font-weight: 800;
+              font-size: 17px;
+              margin-top: 8px;
+            }
+
+            @media print {
+              body {
+                padding: 24px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${conteudo}
+          <script>
+            window.onload = function () {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+
+    janela.document.close();
+  }
+
+  function exportarVendaPdf(venda) {
+    imprimirVendas([venda]);
+  }
+
+  function exportarTodasVendasPdf() {
+    imprimirVendas(vendas);
+  }
+
   if (loading) {
     return <p>Carregando histórico...</p>;
   }
@@ -89,8 +257,14 @@ function SalesHistory() {
           </p>
         </div>
 
-        <div style={styles.totalBadge}>
-          {vendas.length} {vendas.length === 1 ? "venda" : "vendas"}
+        <div style={styles.headerActions}>
+          <div style={styles.totalBadge}>
+            {vendas.length} {vendas.length === 1 ? "venda" : "vendas"}
+          </div>
+
+          <button onClick={exportarTodasVendasPdf} style={styles.exportButton}>
+            Exportar PDF
+          </button>
         </div>
       </header>
 
@@ -132,9 +306,7 @@ function SalesHistory() {
           {vendas.length === 0 ? (
             <div style={styles.emptyBox}>
               <p style={styles.emptyTitle}>Nenhuma venda encontrada</p>
-              <p style={styles.emptyText}>
-                Tente mudar o filtro ou registre novas vendas.
-              </p>
+              <p style={styles.emptyText}>Tente mudar o filtro ou registre novas vendas.</p>
             </div>
           ) : (
             <div style={styles.rows}>
@@ -146,9 +318,7 @@ function SalesHistory() {
                         {venda.cliente_nome || "Cliente não informado"}
                       </p>
 
-                      <p style={styles.rowDate}>
-                        Vendedor: {venda.usuario_nome}
-                      </p>
+                      <p style={styles.rowDate}>Vendedor: {venda.usuario_nome}</p>
 
                       <p style={styles.rowDate}>
                         Data da venda:{" "}
@@ -171,6 +341,13 @@ function SalesHistory() {
                       </span>
 
                       <button
+                        onClick={() => exportarVendaPdf(venda)}
+                        style={styles.pdfButton}
+                      >
+                        PDF
+                      </button>
+
+                      <button
                         onClick={() => excluirVenda(venda.id)}
                         style={styles.deleteButton}
                       >
@@ -183,15 +360,13 @@ function SalesHistory() {
                     <div style={styles.infoBlock}>
                       <span style={styles.infoLabel}>Total</span>
                       <strong style={styles.infoValue}>
-                        R$ {Number(venda.valor_total).toFixed(2)}
+                        {formatarMoeda(venda.valor_total)}
                       </strong>
                     </div>
 
                     <div style={styles.infoBlock}>
                       <span style={styles.infoLabel}>Editada</span>
-                      <strong style={styles.infoValue}>
-                        {venda.editada ? "Sim" : "Não"}
-                      </strong>
+                      <strong style={styles.infoValue}>{venda.editada ? "Sim" : "Não"}</strong>
                     </div>
 
                     <div style={styles.infoBlock}>
@@ -201,6 +376,18 @@ function SalesHistory() {
                       </strong>
                     </div>
                   </div>
+
+                  {venda.itens?.length > 0 && (
+                    <div style={styles.itemsBox}>
+                      <span style={styles.messageLabel}>Produtos</span>
+                      {venda.itens.map((item) => (
+                        <p key={item.id} style={styles.itemText}>
+                          {item.quantidade}x {item.produto_nome} ={" "}
+                          {formatarMoeda(item.subtotal)}
+                        </p>
+                      ))}
+                    </div>
+                  )}
 
                   {venda.texto_original && (
                     <div style={styles.messageBox}>
@@ -254,6 +441,12 @@ const styles = {
     marginTop: "6px",
     lineHeight: 1.6,
   },
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flexWrap: "wrap",
+  },
   totalBadge: {
     padding: "12px 16px",
     borderRadius: "999px",
@@ -261,6 +454,17 @@ const styles = {
     color: "#1f4fa3",
     fontSize: "13px",
     fontWeight: 800,
+  },
+  exportButton: {
+    height: "42px",
+    padding: "0 16px",
+    borderRadius: "999px",
+    border: "none",
+    background: "#111",
+    color: "#fff",
+    fontSize: "13px",
+    fontWeight: 800,
+    cursor: "pointer",
   },
   erro: {
     color: "#b00020",
@@ -407,6 +611,16 @@ const styles = {
     background: "rgba(201,31,40,0.10)",
     color: "#c91f28",
   },
+  pdfButton: {
+    padding: "10px 14px",
+    borderRadius: "999px",
+    border: "none",
+    background: "rgba(31,79,163,0.10)",
+    color: "#1f4fa3",
+    fontSize: "12px",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
   deleteButton: {
     padding: "10px 14px",
     borderRadius: "999px",
@@ -446,6 +660,18 @@ const styles = {
     fontSize: "14px",
     color: "#111",
     fontWeight: 800,
+  },
+  itemsBox: {
+    background: "#fff",
+    borderRadius: "16px",
+    padding: "14px",
+    border: "1px solid #ebe3d8",
+  },
+  itemText: {
+    color: "#444",
+    fontSize: "14px",
+    lineHeight: 1.6,
+    marginTop: "4px",
   },
   messageBox: {
     background: "#fff",
