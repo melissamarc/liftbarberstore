@@ -121,6 +121,13 @@ function Products() {
     }
   }
 
+  function formatarMoeda(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
   return (
     <div style={styles.page}>
       <header style={styles.pageHeader}>
@@ -137,7 +144,7 @@ function Products() {
 
       <section
         style={styles.board(
-          isMobile ? "1fr" : isTablet ? "1fr" : "330px 1fr"
+          isMobile ? "1fr" : isTablet ? "1fr" : "330px minmax(0, 1fr)"
         )}
       >
         <aside style={styles.sidebar}>
@@ -190,7 +197,7 @@ function Products() {
         </aside>
 
         <div style={styles.content}>
-          <form onSubmit={handleBuscar} style={styles.searchBar}>
+          <form onSubmit={handleBuscar} style={styles.searchBar(isMobile)}>
             <input
               placeholder="Buscar produto..."
               value={busca}
@@ -203,14 +210,13 @@ function Products() {
 
           <div style={styles.listArea}>
             {loading ? (
-              <p>Carregando...</p>
+              <p style={styles.feedbackText}>Carregando...</p>
             ) : produtos.length === 0 ? (
-              <p>Nenhum produto encontrado.</p>
+              <p style={styles.feedbackText}>Nenhum produto encontrado.</p>
             ) : (
               produtos.map((produto) => {
                 const lucro =
-                  Number(produto.preco) -
-                  Number(produto.preco_custo || 0);
+                  Number(produto.preco || 0) - Number(produto.preco_custo || 0);
 
                 return (
                   <div key={produto.id} style={styles.row}>
@@ -225,26 +231,54 @@ function Products() {
                         <div style={styles.thumbEmpty}>IMG</div>
                       )}
 
-                      <div>
+                      <div style={styles.productInfo}>
                         <p style={styles.productName}>{produto.nome}</p>
-                        <p style={styles.subText}>
+
+                        <span
+                          style={{
+                            ...styles.statusBadge,
+                            ...(produto.ativo
+                              ? styles.statusActive
+                              : styles.statusInactive),
+                          }}
+                        >
                           {produto.ativo ? "Ativo" : "Inativo"}
-                        </p>
+                        </span>
                       </div>
                     </div>
 
                     <div style={styles.values}>
-                      <span>Venda: R$ {Number(produto.preco).toFixed(2)}</span>
-                      <span>
-                        Custo: R${" "}
-                        {Number(produto.preco_custo || 0).toFixed(2)}
-                      </span>
-                      <span>
-                        Lucro: R$ {Number(lucro).toFixed(2)}
-                      </span>
+                      <div style={styles.valueCard}>
+                        <span style={styles.valueLabel}>Venda</span>
+                        <strong style={styles.valueAmount}>
+                          {formatarMoeda(produto.preco)}
+                        </strong>
+                      </div>
+
+                      <div style={styles.valueCard}>
+                        <span style={styles.valueLabel}>Custo</span>
+                        <strong style={styles.valueAmount}>
+                          {formatarMoeda(produto.preco_custo)}
+                        </strong>
+                      </div>
+
+                      <div style={styles.valueCard}>
+                        <span style={styles.valueLabel}>Lucro</span>
+                        <strong
+                          style={{
+                            ...styles.valueAmount,
+                            ...(lucro >= 0
+                              ? styles.profitPositive
+                              : styles.profitNegative),
+                          }}
+                        >
+                          {formatarMoeda(lucro)}
+                        </strong>
+                      </div>
                     </div>
 
                     <button
+                      type="button"
                       style={styles.editButton}
                       onClick={() => abrirEdicao(produto)}
                     >
@@ -317,36 +351,93 @@ function Products() {
 }
 
 const styles = {
-  page: { display: "flex", flexDirection: "column", gap: 20 },
+  page: {
+    width: "100%",
+    minHeight: "100%",
+    display: "flex",
+    flexDirection: "column",
+    gap: 20,
+  },
+
   pageHeader: {},
-  pageMini: { fontSize: 12, color: "#888", fontWeight: 700 },
-  pageTitle: () => ({ fontSize: 32, fontWeight: 900 }),
-  pageSubtitle: { color: "#666" },
-  erro: { color: "red" },
+
+  pageMini: {
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "#888",
+    fontWeight: 700,
+    marginBottom: 6,
+  },
+
+  pageTitle: (isMobile) => ({
+    fontSize: isMobile ? 28 : 32,
+    fontWeight: 900,
+    color: "#111",
+  }),
+
+  pageSubtitle: {
+    color: "#666",
+    fontSize: 15,
+    lineHeight: 1.6,
+    marginTop: 4,
+  },
+
+  erro: {
+    color: "#b00020",
+    fontWeight: 700,
+  },
 
   board: (cols) => ({
     display: "grid",
     gridTemplateColumns: cols,
     gap: 20,
+    alignItems: "start",
+    minWidth: 0,
   }),
 
   sidebar: {
     display: "flex",
     flexDirection: "column",
     gap: 20,
+    minWidth: 0,
   },
 
   sidebarCard: {
     background: "#fff",
     padding: 22,
     borderRadius: 22,
+    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+    minWidth: 0,
   },
 
-  smallLabel: { fontSize: 12, color: "#888" },
-  bigNumber: { fontSize: 42, fontWeight: 900 },
-  smallText: { color: "#666" },
+  smallLabel: {
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "#888",
+    fontWeight: 800,
+  },
 
-  cardTitle: { fontSize: 20, fontWeight: 800 },
+  bigNumber: {
+    fontSize: 42,
+    lineHeight: 1,
+    fontWeight: 900,
+    color: "#111",
+    marginTop: 8,
+  },
+
+  smallText: {
+    color: "#666",
+    fontSize: 14,
+    marginTop: 6,
+  },
+
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: 800,
+    color: "#111",
+  },
 
   form: {
     display: "flex",
@@ -356,10 +447,16 @@ const styles = {
   },
 
   input: {
+    width: "100%",
     height: 48,
     borderRadius: 12,
     border: "1px solid #ddd",
     padding: "0 14px",
+    outline: "none",
+    background: "#fff",
+    color: "#111",
+    fontSize: 14,
+    minWidth: 0,
   },
 
   primaryButton: {
@@ -376,20 +473,31 @@ const styles = {
     background: "#fff",
     borderRadius: 22,
     padding: 22,
+    minHeight: 0,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
   },
 
-  searchBar: {
+  searchBar: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1fr auto",
+    gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) auto",
     gap: 12,
     marginBottom: 18,
-  },
+    flexShrink: 0,
+    minWidth: 0,
+  }),
 
   searchInput: {
     height: 48,
     borderRadius: 12,
     border: "1px solid #ddd",
     padding: "0 14px",
+    outline: "none",
+    color: "#111",
+    fontSize: 14,
+    minWidth: 0,
   },
 
   searchButton: {
@@ -400,12 +508,19 @@ const styles = {
     background: "#111",
     color: "#fff",
     fontWeight: 800,
+    cursor: "pointer",
   },
 
   listArea: {
     display: "flex",
     flexDirection: "column",
     gap: 12,
+    maxHeight: "620px",
+    overflowY: "auto",
+    overflowX: "auto",
+    paddingRight: 6,
+    paddingBottom: 4,
+    minWidth: 0,
   },
 
   row: {
@@ -413,15 +528,19 @@ const styles = {
     borderRadius: 18,
     padding: 14,
     display: "grid",
-    gridTemplateColumns: "1.2fr 1fr auto",
+    gridTemplateColumns: "minmax(230px, 1fr) minmax(270px, 360px) 86px",
     gap: 14,
     alignItems: "center",
+    border: "1px solid #eee8df",
+    minWidth: 680,
   },
 
   leftInfo: {
     display: "flex",
     gap: 12,
     alignItems: "center",
+    minWidth: 0,
+    overflow: "hidden",
   },
 
   thumb: {
@@ -429,6 +548,7 @@ const styles = {
     height: 56,
     borderRadius: 12,
     objectFit: "cover",
+    flexShrink: 0,
   },
 
   thumbEmpty: {
@@ -439,34 +559,115 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    color: "#777",
+    fontSize: 12,
+    fontWeight: 800,
+    flexShrink: 0,
+  },
+
+  productInfo: {
+    minWidth: 0,
+    overflow: "hidden",
   },
 
   productName: {
     fontWeight: 800,
     fontSize: 15,
+    color: "#111",
+    lineHeight: 1.35,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
   },
 
-  subText: {
-    fontSize: 13,
-    color: "#666",
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    marginTop: 6,
+    padding: "5px 10px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 800,
+  },
+
+  statusActive: {
+    background: "rgba(10,125,50,0.10)",
+    color: "#0a7d32",
+  },
+
+  statusInactive: {
+    background: "rgba(176,0,32,0.10)",
+    color: "#b00020",
   },
 
   values: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 8,
+    minWidth: 0,
+  },
+
+  valueCard: {
+    background: "#fff",
+    border: "1px solid #ebe3d8",
+    borderRadius: 14,
+    padding: "9px 8px",
+    minWidth: 0,
+    overflow: "hidden",
+  },
+
+  valueLabel: {
+    display: "block",
+    fontSize: 10,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    color: "#8a8a8a",
+    fontWeight: 800,
+    marginBottom: 4,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+
+  valueAmount: {
+    display: "block",
+    maxWidth: "100%",
     fontSize: 13,
+    color: "#111",
+    fontWeight: 900,
+    lineHeight: 1.25,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+
+  profitPositive: {
+    color: "#0a7d32",
+  },
+
+  profitNegative: {
+    color: "#b00020",
   },
 
   editButton: {
     height: 42,
-    padding: "0 18px",
+    padding: "0 14px",
     borderRadius: 999,
     border: "none",
     background: "#111",
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
+    width: "86px",
+    justifySelf: "end",
+  },
+
+  feedbackText: {
+    color: "#666",
+    fontSize: 14,
   },
 
   overlay: {
@@ -477,6 +678,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
+    zIndex: 1000,
   },
 
   modal: {
@@ -488,17 +690,21 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: 12,
+    boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
   },
 
   modalTitle: {
     fontSize: 24,
     fontWeight: 800,
+    color: "#111",
   },
 
   checkbox: {
     display: "flex",
     gap: 8,
     alignItems: "center",
+    color: "#111",
+    fontWeight: 700,
   },
 
   modalButtons: {
@@ -513,6 +719,8 @@ const styles = {
     borderRadius: 12,
     border: "1px solid #ddd",
     background: "#fff",
+    color: "#111",
+    fontWeight: 800,
     cursor: "pointer",
   },
 };

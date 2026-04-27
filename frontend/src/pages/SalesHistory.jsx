@@ -96,6 +96,8 @@ function SalesHistory() {
 
   function montarHtmlPedido(venda) {
     const itens = venda.itens || [];
+    const nomeCliente = venda.cliente_nome || "Cliente não informado";
+
     const subtotal = itens.reduce((acc, item) => {
       return acc + Number(item.subtotal || 0);
     }, 0);
@@ -122,6 +124,7 @@ function SalesHistory() {
 
     return `
       <section class="pedido">
+        <div class="cliente-topo">${escaparHtml(nomeCliente)}</div>
         <h1>PEDIDO - ${gerarNumeroPedido(venda)}</h1>
 
         <h2>Produtos</h2>
@@ -136,7 +139,7 @@ function SalesHistory() {
         </div>
 
         <h2>Cliente</h2>
-        <p>Nome: ${escaparHtml(venda.cliente_nome || "Cliente não informado")}</p>
+        <p>Nome: ${escaparHtml(nomeCliente)}</p>
       </section>
     `;
   }
@@ -185,10 +188,21 @@ function SalesHistory() {
               page-break-after: auto;
             }
 
+            .cliente-topo {
+              font-size: 34px;
+              line-height: 1.1;
+              font-weight: 900;
+              text-transform: uppercase;
+              margin-bottom: 10px;
+              color: #111;
+              word-break: break-word;
+            }
+
             h1 {
-              font-size: 22px;
+              font-size: 20px;
               margin: 0 0 24px;
               font-weight: 800;
+              color: #444;
             }
 
             h2 {
@@ -216,6 +230,10 @@ function SalesHistory() {
             @media print {
               body {
                 padding: 24px;
+              }
+
+              .cliente-topo {
+                font-size: 32px;
               }
             }
           </style>

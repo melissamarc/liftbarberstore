@@ -3,6 +3,7 @@ import api from "../services/api";
 import { useResponsive } from "../hooks/useResponsive";
 
 function NewAISale() {
+  const [clienteNome, setClienteNome] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [itens, setItens] = useState([]);
   const [valorTotal, setValorTotal] = useState(0);
@@ -175,6 +176,7 @@ function NewAISale() {
       setSalvando(true);
 
       await api.post("/sales/ia", {
+        cliente_nome: clienteNome.trim() || null,
         mensagem_original: mensagem,
         itens: itens.map((item) => ({
           produto_id: item.produto_id,
@@ -183,6 +185,7 @@ function NewAISale() {
       });
 
       setMensagemSucesso("Venda registrada com sucesso.");
+      setClienteNome("");
       setMensagem("");
       setItens([]);
       setValorTotal(0);
@@ -226,6 +229,14 @@ function NewAISale() {
           </div>
 
           <div style={styles.summaryCard}>
+            <label style={styles.fieldLabel}>Cliente</label>
+            <input
+              placeholder="Nome do cliente"
+              value={clienteNome}
+              onChange={(e) => setClienteNome(e.target.value)}
+              style={styles.clientInput}
+            />
+
             <p style={styles.summaryMini}>Resumo</p>
             <h3 style={styles.summaryValue}>R$ {valorTotal.toFixed(2)}</h3>
             <p style={styles.summaryText}>
@@ -489,6 +500,24 @@ const styles = {
     flexDirection: "column",
     gap: "10px",
   },
+  fieldLabel: {
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "#7b7b7b",
+    fontWeight: 700,
+  },
+  clientInput: {
+    height: "46px",
+    borderRadius: "12px",
+    border: "1px solid #ddd",
+    padding: "0 12px",
+    outline: "none",
+    color: "#111",
+    fontSize: "14px",
+    background: "#faf9f7",
+    marginBottom: "8px",
+  },
   summaryMini: {
     fontSize: "12px",
     textTransform: "uppercase",
@@ -634,35 +663,32 @@ const styles = {
     fontSize: "13px",
   },
   resultItemRight: (isMobile) => ({
-  display: "flex",
-  alignItems: isMobile ? "stretch" : "center",
-  gap: "10px",
-  flexWrap: "wrap",
-  justifyContent: "flex-end",
-  flexDirection: isMobile ? "column" : "row",
-  maxWidth: isMobile ? "100%" : "560px",
-}),
-
+    display: "flex",
+    alignItems: isMobile ? "stretch" : "center",
+    gap: "10px",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    flexDirection: isMobile ? "column" : "row",
+    maxWidth: isMobile ? "100%" : "560px",
+  }),
   productSelectBox: {
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
-  width: "180px",
-  maxWidth: "100%",
-},
-
-productSelect: {
-  width: "100%",
-  height: "42px",
-  borderRadius: "12px",
-  border: "1px solid #ddd",
-  padding: "0 8px",
-  background: "#fff",
-  color: "#111",
-  fontWeight: 600,
-  fontSize: "13px",
-},
-
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    width: "180px",
+    maxWidth: "100%",
+  },
+  productSelect: {
+    width: "100%",
+    height: "42px",
+    borderRadius: "12px",
+    border: "1px solid #ddd",
+    padding: "0 8px",
+    background: "#fff",
+    color: "#111",
+    fontWeight: 600,
+    fontSize: "13px",
+  },
   quantityBox: {
     display: "flex",
     flexDirection: "column",
