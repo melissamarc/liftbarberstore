@@ -13,11 +13,21 @@ function NewAISale() {
   const [mensagemSucesso, setMensagemSucesso] = useState("");
 
   const [produtos, setProdutos] = useState([]);
-  const [produtoManualId, setProdutoManualId] = useState("");
+  const [produtoManualBusca, setProdutoManualBusca] = useState("");
+  const [produtoManualSelecionado, setProdutoManualSelecionado] = useState(null);
   const [quantidadeManual, setQuantidadeManual] = useState(1);
   const [carregandoProdutos, setCarregandoProdutos] = useState(false);
 
   const { isMobile, isTablet } = useResponsive();
+
+  const produtosFiltrados = produtos
+    .filter((produto) => produto.ativo !== false && produto.ativo !== 0)
+    .filter((produto) =>
+      String(produto.nome || "")
+        .toLowerCase()
+        .includes(produtoManualBusca.trim().toLowerCase())
+    )
+    .slice(0, 6);
 
   useEffect(() => {
     carregarProdutos();
@@ -54,6 +64,18 @@ function NewAISale() {
       quantidade: qtd,
       subtotal: preco * qtd,
     };
+  }
+
+  function selecionarProdutoManual(produto) {
+    setProdutoManualSelecionado(produto);
+    setProdutoManualBusca(produto.nome);
+    setErro("");
+  }
+
+  function limparProdutoManual() {
+    setProdutoManualSelecionado(null);
+    setProdutoManualBusca("");
+    setQuantidadeManual(1);
   }
 
   async function interpretarMensagem() {
@@ -125,12 +147,10 @@ function NewAISale() {
   }
 
   function adicionarProdutoManual() {
-    const produto = produtos.find(
-      (item) => String(item.id) === String(produtoManualId)
-    );
+    const produto = produtoManualSelecionado;
 
     if (!produto) {
-      setErro("Selecione um produto para adicionar.");
+      setErro("Pesquise e selecione um produto para adicionar.");
       return;
     }
 
@@ -158,8 +178,7 @@ function NewAISale() {
 
     setItens(itensAtualizados);
     setValorTotal(calcularTotal(itensAtualizados));
-    setProdutoManualId("");
-    setQuantidadeManual(1);
+    limparProdutoManual();
     setErro("");
   }
 
@@ -189,8 +208,7 @@ function NewAISale() {
       setMensagem("");
       setItens([]);
       setValorTotal(0);
-      setProdutoManualId("");
-      setQuantidadeManual(1);
+      limparProdutoManual();
     } catch (error) {
       setErro(error.response?.data?.message || "Erro ao salvar venda.");
     } finally {
@@ -348,26 +366,53 @@ function NewAISale() {
 
                 <div style={styles.manualAddBox}>
                   <div style={styles.manualFields}>
-                    <div style={styles.productSelectBox}>
+                    <div style={styles.manualSearchBox}>
                       <label style={styles.qtyLabel}>Adicionar produto</label>
-                      <select
-                        value={produtoManualId}
-                        onChange={(e) => setProdutoManualId(e.target.value)}
-                        style={styles.productSelect}
-                        disabled={carregandoProdutos}
-                      >
-                        <option value="">
-                          {carregandoProdutos
-                            ? "Carregando produtos..."
-                            : "Selecione um produto"}
-                        </option>
 
-                        {produtos.map((produto) => (
-                          <option key={produto.id} value={produto.id}>
-                            {produto.nome} - R$ {Number(produto.preco).toFixed(2)}
-                          </option>
-                        ))}
-                      </select>
+                      <input
+                        placeholder={
+                          carregandoProdutos
+                            ? "Carregando produtos..."
+                            : "Digite o nome do produto..."
+                        }
+                        value={produtoManualBusca}
+                        onChange={(e) => {
+                          setProdutoManualBusca(e.target.value);
+                          setProdutoManualSelecionado(null);
+                        }}
+                        disabled={carregandoProdutos}
+                        style={styles.manualSearchInput}
+                      />
+
+                      {produtoManualBusca.trim() &&
+                        !produtoManualSelecionado &&
+                        produtosFiltrados.length > 0 && (
+                          <div style={styles.manualResults}>
+                            {produtosFiltrados.map((produto) => (
+                              <button
+                                key={produto.id}
+                                type="button"
+                                onClick={() => selecionarProdutoManual(produto)}
+                                style={styles.manualResultItem}
+                              >
+                                <span style={styles.manualResultName}>
+                                  {produto.nome}
+                                </span>
+                                <strong style={styles.manualResultPrice}>
+                                  R$ {Number(produto.preco).toFixed(2)}
+                                </strong>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                      {produtoManualBusca.trim() &&
+                        !produtoManualSelecionado &&
+                        produtosFiltrados.length === 0 && (
+                          <div style={styles.manualEmptyResult}>
+                            Nenhum produto encontrado.
+                          </div>
+                        )}
                     </div>
 
                     <div style={styles.quantityBox}>
@@ -381,6 +426,25 @@ function NewAISale() {
                       />
                     </div>
                   </div>
+
+                  {produtoManualSelecionado && (
+                    <div style={styles.selectedProductBox}>
+                      <div style={styles.selectedProductInfo}>
+                        <span style={styles.selectedProductLabel}>Selecionado</span>
+                        <strong style={styles.selectedProductName}>
+                          {produtoManualSelecionado.nome}
+                        </strong>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={limparProdutoManual}
+                        style={styles.clearProductButton}
+                      >
+                        Trocar
+                      </button>
+                    </div>
+                  )}
 
                   <button onClick={adicionarProdutoManual} style={styles.addManualButton}>
                     Adicionar à venda
@@ -758,6 +822,127 @@ const styles = {
     alignItems: "end",
     gap: "14px",
     flexWrap: "wrap",
+  },
+  manualSearchBox: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    width: "280px",
+    maxWidth: "100%",
+  },
+  manualSearchInput: {
+    width: "100%",
+    height: "42px",
+    borderRadius: "12px",
+    border: "1px solid #ddd",
+    padding: "0 10px",
+    background: "#fff",
+    color: "#111",
+    fontWeight: 600,
+    fontSize: "13px",
+    outline: "none",
+  },
+  manualResults: {
+    position: "absolute",
+    top: "66px",
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    background: "#fff",
+    border: "1px solid #ddd",
+    borderRadius: "14px",
+    boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
+    overflow: "hidden",
+    maxHeight: "240px",
+    overflowY: "auto",
+  },
+  manualResultItem: {
+    width: "100%",
+    border: "none",
+    background: "#fff",
+    padding: "11px 12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    cursor: "pointer",
+    textAlign: "left",
+    borderBottom: "1px solid #f1eee8",
+  },
+  manualResultName: {
+    minWidth: 0,
+    color: "#111",
+    fontSize: "13px",
+    fontWeight: 800,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  manualResultPrice: {
+    color: "#1f4fa3",
+    fontSize: "12px",
+    fontWeight: 900,
+    whiteSpace: "nowrap",
+  },
+  manualEmptyResult: {
+    position: "absolute",
+    top: "66px",
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    background: "#fff",
+    border: "1px solid #ddd",
+    borderRadius: "14px",
+    padding: "12px",
+    color: "#666",
+    fontSize: "13px",
+    boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
+  },
+  selectedProductBox: {
+    minHeight: "42px",
+    borderRadius: "14px",
+    background: "#f8f6f2",
+    border: "1px solid #eee8df",
+    padding: "9px 12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    flex: "1 1 240px",
+    minWidth: 0,
+  },
+  selectedProductInfo: {
+    minWidth: 0,
+  },
+  selectedProductLabel: {
+    display: "block",
+    fontSize: "10px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "#8a8a8a",
+    fontWeight: 800,
+    marginBottom: "2px",
+  },
+  selectedProductName: {
+    display: "block",
+    color: "#111",
+    fontSize: "13px",
+    fontWeight: 900,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  clearProductButton: {
+    border: "none",
+    background: "#111",
+    color: "#fff",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontSize: "12px",
+    fontWeight: 800,
+    cursor: "pointer",
+    flexShrink: 0,
   },
   addManualButton: {
     height: "42px",
