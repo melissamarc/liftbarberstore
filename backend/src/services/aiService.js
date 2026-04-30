@@ -10,7 +10,7 @@ async function interpretarVendaComIA(mensagem, produtos) {
   const listaProdutos = produtos.map((p) => ({
     id: p.id,
     nome: p.nome,
-  });
+  }));
 
   const prompt = `
 Você é um sistema que interpreta pedidos de clientes.
