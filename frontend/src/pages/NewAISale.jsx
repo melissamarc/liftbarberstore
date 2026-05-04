@@ -18,6 +18,12 @@ function NewAISale() {
   const [quantidadeManual, setQuantidadeManual] = useState(1);
   const [carregandoProdutos, setCarregandoProdutos] = useState(false);
 
+  const [cadastroAberto, setCadastroAberto] = useState(false);
+  const [novoProdutoNome, setNovoProdutoNome] = useState("");
+  const [novoProdutoPreco, setNovoProdutoPreco] = useState("");
+  const [novoProdutoPrecoCusto, setNovoProdutoPrecoCusto] = useState("");
+  const [cadastrandoProduto, setCadastrandoProduto] = useState(false);
+
   const { isMobile, isTablet } = useResponsive();
 
   const produtosFiltrados = produtos
@@ -33,15 +39,21 @@ function NewAISale() {
     carregarProdutos();
   }, []);
 
-  async function carregarProdutos() {
+  async function carregarProdutos(busca = "") {
     try {
       setCarregandoProdutos(true);
 
-      const response = await api.get("/products");
+      const response = await api.get("/products", {
+        params: busca ? { busca } : {},
+      });
 
-      setProdutos(response.data || []);
+      const lista = response.data || [];
+      setProdutos(lista);
+
+      return lista;
     } catch (error) {
       setErro("Erro ao carregar produtos.");
+      return [];
     } finally {
       setCarregandoProdutos(false);
     }
@@ -66,9 +78,37 @@ function NewAISale() {
     };
   }
 
+  function adicionarProdutoNaLista(produto, quantidade = quantidadeManual) {
+    const qtd = Number(quantidade) || 1;
+
+    const itemExistenteIndex = itens.findIndex(
+      (item) => String(item.produto_id) === String(produto.id)
+    );
+
+    let itensAtualizados;
+
+    if (itemExistenteIndex >= 0) {
+      itensAtualizados = [...itens];
+
+      const novaQuantidade =
+        Number(itensAtualizados[itemExistenteIndex].quantidade || 0) + qtd;
+
+      itensAtualizados[itemExistenteIndex] = montarItemPorProduto(
+        produto,
+        novaQuantidade
+      );
+    } else {
+      itensAtualizados = [...itens, montarItemPorProduto(produto, qtd)];
+    }
+
+    setItens(itensAtualizados);
+    setValorTotal(calcularTotal(itensAtualizados));
+  }
+
   function selecionarProdutoManual(produto) {
     setProdutoManualSelecionado(produto);
     setProdutoManualBusca(produto.nome);
+    setCadastroAberto(false);
     setErro("");
   }
 
@@ -76,6 +116,84 @@ function NewAISale() {
     setProdutoManualSelecionado(null);
     setProdutoManualBusca("");
     setQuantidadeManual(1);
+  }
+
+  function abrirCadastroProduto() {
+    setCadastroAberto(true);
+    setNovoProdutoNome(produtoManualBusca);
+    setNovoProdutoPreco("");
+    setNovoProdutoPrecoCusto("");
+    setProdutoManualSelecionado(null);
+    setErro("");
+  }
+
+  function fecharCadastroProduto() {
+    setCadastroAberto(false);
+    setNovoProdutoNome("");
+    setNovoProdutoPreco("");
+    setNovoProdutoPrecoCusto("");
+  }
+
+  async function cadastrarProdutoNaVenda() {
+    try {
+      setErro("");
+      setMensagemSucesso("");
+
+      if (!novoProdutoNome.trim()) {
+        setErro("Informe o nome do produto.");
+        return;
+      }
+
+      const precoNumero = Number(novoProdutoPreco);
+      const precoCustoNumero = Number(novoProdutoPrecoCusto || 0);
+
+      if (!precoNumero || precoNumero <= 0) {
+        setErro("Informe um preço de venda válido.");
+        return;
+      }
+
+      if (Number.isNaN(precoCustoNumero) || precoCustoNumero < 0) {
+        setErro("Informe um preço de custo válido.");
+        return;
+      }
+
+      setCadastrandoProduto(true);
+
+      const formData = new FormData();
+      formData.append("nome", novoProdutoNome.trim());
+      formData.append("preco", precoNumero);
+      formData.append("preco_custo", precoCustoNumero);
+
+      await api.post("/products", formData);
+
+      const produtosAtualizados = await carregarProdutos(novoProdutoNome.trim());
+
+      const produtoCriado =
+        produtosAtualizados.find(
+          (produto) =>
+            String(produto.nome || "").toLowerCase() ===
+            novoProdutoNome.trim().toLowerCase()
+        ) || produtosAtualizados[0];
+
+      if (!produtoCriado) {
+        setErro("Produto cadastrado, mas não foi possível adicioná-lo automaticamente.");
+        fecharCadastroProduto();
+        return;
+      }
+
+      adicionarProdutoNaLista(produtoCriado);
+      setMensagemSucesso("Produto cadastrado e adicionado à venda.");
+      setProdutoManualBusca("");
+      setProdutoManualSelecionado(null);
+      setQuantidadeManual(1);
+      fecharCadastroProduto();
+
+      await carregarProdutos();
+    } catch (error) {
+      setErro(error.response?.data?.message || "Erro ao cadastrar produto.");
+    } finally {
+      setCadastrandoProduto(false);
+    }
   }
 
   async function interpretarMensagem() {
@@ -147,37 +265,12 @@ function NewAISale() {
   }
 
   function adicionarProdutoManual() {
-    const produto = produtoManualSelecionado;
-
-    if (!produto) {
+    if (!produtoManualSelecionado) {
       setErro("Pesquise e selecione um produto para adicionar.");
       return;
     }
 
-    const quantidade = Number(quantidadeManual) || 1;
-
-    const itemExistenteIndex = itens.findIndex(
-      (item) => String(item.produto_id) === String(produto.id)
-    );
-
-    let itensAtualizados;
-
-    if (itemExistenteIndex >= 0) {
-      itensAtualizados = [...itens];
-
-      const novaQuantidade =
-        Number(itensAtualizados[itemExistenteIndex].quantidade || 0) + quantidade;
-
-      itensAtualizados[itemExistenteIndex] = montarItemPorProduto(
-        produto,
-        novaQuantidade
-      );
-    } else {
-      itensAtualizados = [...itens, montarItemPorProduto(produto, quantidade)];
-    }
-
-    setItens(itensAtualizados);
-    setValorTotal(calcularTotal(itensAtualizados));
+    adicionarProdutoNaLista(produtoManualSelecionado);
     limparProdutoManual();
     setErro("");
   }
@@ -209,6 +302,7 @@ function NewAISale() {
       setItens([]);
       setValorTotal(0);
       limparProdutoManual();
+      fecharCadastroProduto();
     } catch (error) {
       setErro(error.response?.data?.message || "Erro ao salvar venda.");
     } finally {
@@ -379,6 +473,7 @@ function NewAISale() {
                         onChange={(e) => {
                           setProdutoManualBusca(e.target.value);
                           setProdutoManualSelecionado(null);
+                          setCadastroAberto(false);
                         }}
                         disabled={carregandoProdutos}
                         style={styles.manualSearchInput}
@@ -410,7 +505,14 @@ function NewAISale() {
                         !produtoManualSelecionado &&
                         produtosFiltrados.length === 0 && (
                           <div style={styles.manualEmptyResult}>
-                            Nenhum produto encontrado.
+                            <span>Nenhum produto encontrado.</span>
+                            <button
+                              type="button"
+                              onClick={abrirCadastroProduto}
+                              style={styles.inlineCreateButton}
+                            >
+                              Cadastrar produto
+                            </button>
                           </div>
                         )}
                     </div>
@@ -449,6 +551,69 @@ function NewAISale() {
                   <button onClick={adicionarProdutoManual} style={styles.addManualButton}>
                     Adicionar à venda
                   </button>
+
+                  {cadastroAberto && (
+                    <div style={styles.createProductBox}>
+                      <div style={styles.createProductHeader}>
+                        <h4 style={styles.createProductTitle}>Cadastrar produto</h4>
+
+                        <button
+                          type="button"
+                          onClick={fecharCadastroProduto}
+                          style={styles.closeCreateButton}
+                        >
+                          Fechar
+                        </button>
+                      </div>
+
+                      <div style={styles.createProductGrid(isMobile)}>
+                        <div style={styles.createField}>
+                          <label style={styles.qtyLabel}>Nome</label>
+                          <input
+                            value={novoProdutoNome}
+                            onChange={(e) => setNovoProdutoNome(e.target.value)}
+                            placeholder="Nome do produto"
+                            style={styles.createInput}
+                          />
+                        </div>
+
+                        <div style={styles.createField}>
+                          <label style={styles.qtyLabel}>Preço venda</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={novoProdutoPreco}
+                            onChange={(e) => setNovoProdutoPreco(e.target.value)}
+                            placeholder="0.00"
+                            style={styles.createInput}
+                          />
+                        </div>
+
+                        <div style={styles.createField}>
+                          <label style={styles.qtyLabel}>Preço custo</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={novoProdutoPrecoCusto}
+                            onChange={(e) => setNovoProdutoPrecoCusto(e.target.value)}
+                            placeholder="0.00"
+                            style={styles.createInput}
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={cadastrarProdutoNaVenda}
+                        disabled={cadastrandoProduto}
+                        style={styles.createProductButton}
+                      >
+                        {cadastrandoProduto
+                          ? "Cadastrando..."
+                          : "Cadastrar e adicionar à venda"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -898,6 +1063,20 @@ const styles = {
     color: "#666",
     fontSize: "13px",
     boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  inlineCreateButton: {
+    height: "34px",
+    borderRadius: "999px",
+    border: "none",
+    background: "#1f4fa3",
+    color: "#fff",
+    fontSize: "12px",
+    fontWeight: 800,
+    cursor: "pointer",
+    width: "100%",
   },
   selectedProductBox: {
     minHeight: "42px",
@@ -950,6 +1129,72 @@ const styles = {
     borderRadius: "12px",
     border: "none",
     background: "#1f4fa3",
+    color: "#fff",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+  createProductBox: {
+    width: "100%",
+    marginTop: "14px",
+    padding: "16px",
+    borderRadius: "18px",
+    background: "#f8f6f2",
+    border: "1px solid #eee8df",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+  createProductHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+  },
+  createProductTitle: {
+    fontSize: "16px",
+    fontWeight: 900,
+    color: "#111",
+  },
+  closeCreateButton: {
+    height: "34px",
+    padding: "0 12px",
+    borderRadius: "999px",
+    border: "1px solid #ddd",
+    background: "#fff",
+    color: "#111",
+    fontSize: "12px",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+  createProductGrid: (isMobile) => ({
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr 1fr",
+    gap: "10px",
+  }),
+  createField: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    minWidth: 0,
+  },
+  createInput: {
+    width: "100%",
+    height: "42px",
+    borderRadius: "12px",
+    border: "1px solid #ddd",
+    padding: "0 10px",
+    background: "#fff",
+    color: "#111",
+    fontWeight: 600,
+    fontSize: "13px",
+    outline: "none",
+  },
+  createProductButton: {
+    height: "44px",
+    padding: "0 16px",
+    borderRadius: "12px",
+    border: "none",
+    background: "#111",
     color: "#fff",
     fontWeight: 800,
     cursor: "pointer",
