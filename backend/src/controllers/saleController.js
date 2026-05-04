@@ -71,7 +71,10 @@ async function criarVendaManual(req, res) {
 
     await connection.beginTransaction();
 
-    const { valorTotal, itensProcessados } = await processarItensVenda(connection, itens);
+    const { valorTotal, itensProcessados } = await processarItensVenda(
+      connection,
+      itens
+    );
 
     const dataVendaFinal = data_venda || new Date().toISOString().slice(0, 10);
 
@@ -80,13 +83,7 @@ async function criarVendaManual(req, res) {
       INSERT INTO vendas (usuario_id, cliente_nome, data_venda, valor_total, origem)
       VALUES (?, ?, ?, ?, ?)
       `,
-      [
-        usuarioLogado.id,
-        cliente_nome || null,
-        dataVendaFinal,
-        valorTotal,
-        "manual",
-      ]
+      [usuarioLogado.id, cliente_nome || null, dataVendaFinal, valorTotal, "manual"]
     );
 
     const vendaId = resultadoVenda.insertId;
@@ -154,7 +151,10 @@ async function criarVendaIa(req, res) {
 
     await connection.beginTransaction();
 
-    const { valorTotal, itensProcessados } = await processarItensVenda(connection, itens);
+    const { valorTotal, itensProcessados } = await processarItensVenda(
+      connection,
+      itens
+    );
 
     const dataVendaFinal = data_venda || new Date().toISOString().slice(0, 10);
 
@@ -219,6 +219,106 @@ async function criarVendaIa(req, res) {
 
     return res.status(400).json({
       message: error.message || "Erro ao criar venda com IA.",
+    });
+  }
+}
+
+// ATUALIZAR VENDA
+async function atualizarVenda(req, res) {
+  const connection = await pool.getConnection();
+
+  try {
+    const { id } = req.params;
+    const { cliente_nome, data_venda, itens } = req.body;
+    const usuarioLogado = req.usuario;
+
+    await connection.beginTransaction();
+
+    const [vendas] = await connection.query(
+      `SELECT * FROM vendas WHERE id = ?`,
+      [id]
+    );
+
+    if (vendas.length === 0) {
+      await connection.rollback();
+      connection.release();
+
+      return res.status(404).json({
+        message: "Venda não encontrada.",
+      });
+    }
+
+    const venda = vendas[0];
+
+    const usuarioEhAdmin = usuarioLogado.cargo === "admin";
+    const usuarioEhDono = Number(venda.usuario_id) === Number(usuarioLogado.id);
+
+    if (!usuarioEhAdmin && !usuarioEhDono) {
+      await connection.rollback();
+      connection.release();
+
+      return res.status(403).json({
+        message: "Você não tem permissão para editar esta venda.",
+      });
+    }
+
+    const { valorTotal, itensProcessados } = await processarItensVenda(
+      connection,
+      itens
+    );
+
+    const dataVendaFinal = data_venda || venda.data_venda;
+
+    await connection.query(
+      `
+      UPDATE vendas
+      SET
+        cliente_nome = ?,
+        data_venda = ?,
+        valor_total = ?,
+        editada = 1,
+        editada_em = NOW(),
+        editada_por = ?
+      WHERE id = ?
+      `,
+      [cliente_nome || null, dataVendaFinal, valorTotal, usuarioLogado.id, id]
+    );
+
+    await connection.query(`DELETE FROM itens_venda WHERE venda_id = ?`, [id]);
+
+    for (const item of itensProcessados) {
+      await connection.query(
+        `
+        INSERT INTO itens_venda
+        (venda_id, produto_id, quantidade, preco_unitario, custo_unitario, subtotal, lucro)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          id,
+          item.produto_id,
+          item.quantidade,
+          item.preco_unitario,
+          item.custo_unitario,
+          item.subtotal,
+          item.lucro,
+        ]
+      );
+    }
+
+    await connection.commit();
+    connection.release();
+
+    return res.status(200).json({
+      message: "Venda atualizada com sucesso.",
+    });
+  } catch (error) {
+    await connection.rollback();
+    connection.release();
+
+    console.error("Erro ao atualizar venda:", error.message);
+
+    return res.status(400).json({
+      message: error.message || "Erro ao atualizar venda.",
     });
   }
 }
@@ -319,7 +419,6 @@ async function listarVendas(req, res) {
   }
 }
 
-
 // BUSCAR VENDA POR ID
 async function buscarVendaPorId(req, res) {
   try {
@@ -393,10 +492,7 @@ async function excluirVenda(req, res) {
     const { id } = req.params;
     const usuarioLogado = req.usuario;
 
-    const [vendas] = await pool.query(
-      `SELECT * FROM vendas WHERE id = ?`,
-      [id]
-    );
+    const [vendas] = await pool.query(`SELECT * FROM vendas WHERE id = ?`, [id]);
 
     if (vendas.length === 0) {
       return res.status(404).json({
@@ -431,6 +527,7 @@ async function excluirVenda(req, res) {
 module.exports = {
   criarVendaManual,
   criarVendaIa,
+  atualizarVenda,
   listarVendas,
   buscarVendaPorId,
   excluirVenda,

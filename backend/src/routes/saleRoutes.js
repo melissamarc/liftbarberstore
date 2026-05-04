@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   criarVendaManual,
   criarVendaIa,
+  atualizarVenda,
   listarVendas,
   buscarVendaPorId,
   excluirVenda,
@@ -42,6 +43,14 @@ router.get(
   authMiddleware,
   roleMiddleware("admin", "vendedor"),
   buscarVendaPorId
+);
+
+// atualizar venda: admin e vendedor
+router.put(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("admin", "vendedor"),
+  atualizarVenda
 );
 
 // excluir venda: admin e vendedor
