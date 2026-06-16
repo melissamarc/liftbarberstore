@@ -17,14 +17,18 @@ async function resumoDashboard(req, res) {
         COUNT(*) AS quantidade_vendas_semana,
         COALESCE(SUM(valor_total), 0) AS total_vendido_semana
       FROM vendas
-      WHERE data_criacao >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      WHERE data_criacao >= DATE_SUB(CURDATE(), INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY)
+        AND data_criacao < DATE_ADD(
+          DATE_SUB(CURDATE(), INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY),
+          INTERVAL 7 DAY
+        )
     `);
 
     const [lucroHojeResult] = await pool.query(`
       SELECT
         COALESCE(SUM(iv.lucro), 0) AS lucro_hoje
-      FROM itens_venda iv
-      INNER JOIN vendas v ON v.id = iv.venda_id
+      FROM vendas v
+      LEFT JOIN itens_venda iv ON iv.venda_id = v.id
       WHERE v.data_criacao >= CURDATE()
         AND v.data_criacao < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
     `);
@@ -41,8 +45,8 @@ async function resumoDashboard(req, res) {
     const [lucroMesResult] = await pool.query(`
       SELECT
         COALESCE(SUM(iv.lucro), 0) AS lucro_mes
-      FROM itens_venda iv
-      INNER JOIN vendas v ON v.id = iv.venda_id
+      FROM vendas v
+      LEFT JOIN itens_venda iv ON iv.venda_id = v.id
       WHERE v.data_criacao >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
         AND v.data_criacao < DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY)
     `);

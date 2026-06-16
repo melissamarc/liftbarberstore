@@ -1,287 +1,56 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import api from "../services/api";
 import { useResponsive } from "../hooks/useResponsive";
 
 function NewAISale() {
   const [clienteNome, setClienteNome] = useState("");
+  const [dataVenda, setDataVenda] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const [mensagem, setMensagem] = useState("");
-  const [itens, setItens] = useState([]);
-  const [valorTotal, setValorTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [mensagemSucesso, setMensagemSucesso] = useState("");
 
-  const [produtos, setProdutos] = useState([]);
-  const [produtoManualBusca, setProdutoManualBusca] = useState("");
-  const [produtoManualSelecionado, setProdutoManualSelecionado] = useState(null);
-  const [quantidadeManual, setQuantidadeManual] = useState(1);
-  const [carregandoProdutos, setCarregandoProdutos] = useState(false);
-
-  const [cadastroAberto, setCadastroAberto] = useState(false);
-  const [novoProdutoNome, setNovoProdutoNome] = useState("");
-  const [novoProdutoPreco, setNovoProdutoPreco] = useState("");
-  const [novoProdutoPrecoCusto, setNovoProdutoPrecoCusto] = useState("");
-  const [cadastrandoProduto, setCadastrandoProduto] = useState(false);
-
   const { isMobile, isTablet } = useResponsive();
 
-  const produtosFiltrados = produtos
-    .filter((produto) => produto.ativo !== false && produto.ativo !== 0)
-    .filter((produto) =>
-      String(produto.nome || "")
-        .toLowerCase()
-        .includes(produtoManualBusca.trim().toLowerCase())
-    )
-    .slice(0, 6);
+  const valorDetectado = useMemo(() => {
+    if (!mensagem.trim()) return 0;
 
-  useEffect(() => {
-    carregarProdutos();
-  }, []);
-
-  async function carregarProdutos(busca = "") {
-    try {
-      setCarregandoProdutos(true);
-
-      const response = await api.get("/products", {
-        params: busca ? { busca } : {},
-      });
-
-      const lista = response.data || [];
-      setProdutos(lista);
-
-      return lista;
-    } catch (error) {
-      setErro("Erro ao carregar produtos.");
-      return [];
-    } finally {
-      setCarregandoProdutos(false);
-    }
-  }
-
-  function calcularTotal(lista) {
-    return lista.reduce((acc, item) => {
-      return acc + Number(item.preco_unitario || 0) * Number(item.quantidade || 0);
-    }, 0);
-  }
-
-  function montarItemPorProduto(produto, quantidade = 1) {
-    const qtd = Number(quantidade) || 1;
-    const preco = Number(produto.preco || 0);
-
-    return {
-      produto_id: produto.id,
-      produto_nome: produto.nome,
-      preco_unitario: preco,
-      quantidade: qtd,
-      subtotal: preco * qtd,
-    };
-  }
-
-  function adicionarProdutoNaLista(produto, quantidade = quantidadeManual) {
-    const qtd = Number(quantidade) || 1;
-
-    const itemExistenteIndex = itens.findIndex(
-      (item) => String(item.produto_id) === String(produto.id)
+    const linhas = mensagem.split("\n");
+    const linhaTotal = linhas.find((linha) =>
+      linha.toLowerCase().includes("total")
     );
 
-    let itensAtualizados;
+    const textoBase = linhaTotal || mensagem;
 
-    if (itemExistenteIndex >= 0) {
-      itensAtualizados = [...itens];
+    const valores = textoBase.match(
+      /(\d{1,3}(?:\.\d{3})*|\d+)(?:,\d{2}|\.\d{2})/g
+    );
 
-      const novaQuantidade =
-        Number(itensAtualizados[itemExistenteIndex].quantidade || 0) + qtd;
+    if (!valores || valores.length === 0) return 0;
 
-      itensAtualizados[itemExistenteIndex] = montarItemPorProduto(
-        produto,
-        novaQuantidade
-      );
-    } else {
-      itensAtualizados = [...itens, montarItemPorProduto(produto, qtd)];
+    if (linhaTotal) {
+      return Number(valores[0].replace(/\./g, "").replace(",", "."));
     }
 
-    setItens(itensAtualizados);
-    setValorTotal(calcularTotal(itensAtualizados));
-  }
-
-  function selecionarProdutoManual(produto) {
-    setProdutoManualSelecionado(produto);
-    setProdutoManualBusca(produto.nome);
-    setCadastroAberto(false);
-    setErro("");
-  }
-
-  function limparProdutoManual() {
-    setProdutoManualSelecionado(null);
-    setProdutoManualBusca("");
-    setQuantidadeManual(1);
-  }
-
-  function abrirCadastroProduto() {
-    setCadastroAberto(true);
-    setNovoProdutoNome(produtoManualBusca);
-    setNovoProdutoPreco("");
-    setNovoProdutoPrecoCusto("");
-    setProdutoManualSelecionado(null);
-    setErro("");
-  }
-
-  function fecharCadastroProduto() {
-    setCadastroAberto(false);
-    setNovoProdutoNome("");
-    setNovoProdutoPreco("");
-    setNovoProdutoPrecoCusto("");
-  }
-
-  async function cadastrarProdutoNaVenda() {
-    try {
-      setErro("");
-      setMensagemSucesso("");
-
-      if (!novoProdutoNome.trim()) {
-        setErro("Informe o nome do produto.");
-        return;
-      }
-
-      const precoNumero = Number(novoProdutoPreco);
-      const precoCustoNumero = Number(novoProdutoPrecoCusto || 0);
-
-      if (!precoNumero || precoNumero <= 0) {
-        setErro("Informe um preço de venda válido.");
-        return;
-      }
-
-      if (Number.isNaN(precoCustoNumero) || precoCustoNumero < 0) {
-        setErro("Informe um preço de custo válido.");
-        return;
-      }
-
-      setCadastrandoProduto(true);
-
-      const formData = new FormData();
-      formData.append("nome", novoProdutoNome.trim());
-      formData.append("preco", precoNumero);
-      formData.append("preco_custo", precoCustoNumero);
-
-      await api.post("/products", formData);
-
-      const produtosAtualizados = await carregarProdutos(novoProdutoNome.trim());
-
-      const produtoCriado =
-        produtosAtualizados.find(
-          (produto) =>
-            String(produto.nome || "").toLowerCase() ===
-            novoProdutoNome.trim().toLowerCase()
-        ) || produtosAtualizados[0];
-
-      if (!produtoCriado) {
-        setErro("Produto cadastrado, mas não foi possível adicioná-lo automaticamente.");
-        fecharCadastroProduto();
-        return;
-      }
-
-      adicionarProdutoNaLista(produtoCriado);
-      setMensagemSucesso("Produto cadastrado e adicionado à venda.");
-      setProdutoManualBusca("");
-      setProdutoManualSelecionado(null);
-      setQuantidadeManual(1);
-      fecharCadastroProduto();
-
-      await carregarProdutos();
-    } catch (error) {
-      setErro(error.response?.data?.message || "Erro ao cadastrar produto.");
-    } finally {
-      setCadastrandoProduto(false);
-    }
-  }
-
-  async function interpretarMensagem() {
-    try {
-      setErro("");
-      setMensagemSucesso("");
-      setLoading(true);
-
-      const response = await api.post("/ai/parse-sale", {
-        mensagem,
-      });
-
-      const itensEncontrados = response.data.itens_encontrados || [];
-
-      const itensNormalizados = itensEncontrados.map((item) => {
-        const quantidade = Number(item.quantidade || 1);
-        const precoUnitario = Number(item.preco_unitario || 0);
-
-        return {
-          produto_id: item.produto_id,
-          produto_nome: item.produto_nome,
-          preco_unitario: precoUnitario,
-          quantidade,
-          subtotal: precoUnitario * quantidade,
-        };
-      });
-
-      setItens(itensNormalizados);
-      setValorTotal(calcularTotal(itensNormalizados));
-    } catch (error) {
-      setErro("Erro ao interpretar mensagem.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function alterarProduto(index, produtoId) {
-    const produto = produtos.find((item) => String(item.id) === String(produtoId));
-
-    if (!produto) return;
-
-    const itensAtualizados = [...itens];
-    const quantidadeAtual = itensAtualizados[index].quantidade || 1;
-
-    itensAtualizados[index] = montarItemPorProduto(produto, quantidadeAtual);
-
-    setItens(itensAtualizados);
-    setValorTotal(calcularTotal(itensAtualizados));
-  }
-
-  function alterarQuantidade(index, novaQuantidade) {
-    const quantidade = Number(novaQuantidade) || 1;
-
-    const itensAtualizados = [...itens];
-
-    itensAtualizados[index].quantidade = quantidade;
-    itensAtualizados[index].subtotal =
-      Number(itensAtualizados[index].preco_unitario || 0) * quantidade;
-
-    setItens(itensAtualizados);
-    setValorTotal(calcularTotal(itensAtualizados));
-  }
-
-  function removerItem(index) {
-    const itensAtualizados = itens.filter((_, i) => i !== index);
-
-    setItens(itensAtualizados);
-    setValorTotal(calcularTotal(itensAtualizados));
-  }
-
-  function adicionarProdutoManual() {
-    if (!produtoManualSelecionado) {
-      setErro("Pesquise e selecione um produto para adicionar.");
-      return;
-    }
-
-    adicionarProdutoNaLista(produtoManualSelecionado);
-    limparProdutoManual();
-    setErro("");
-  }
+    return valores.reduce((acc, valor) => {
+      return acc + Number(valor.replace(/\./g, "").replace(",", "."));
+    }, 0);
+  }, [mensagem]);
 
   async function confirmarVenda() {
     try {
       setErro("");
       setMensagemSucesso("");
 
-      if (itens.length === 0) {
-        setErro("Nenhum item para salvar.");
+      if (!mensagem.trim()) {
+        setErro("Cole a mensagem do pedido antes de salvar.");
+        return;
+      }
+
+      if (!valorDetectado || valorDetectado <= 0) {
+        setErro("Não encontrei um valor válido na mensagem.");
         return;
       }
 
@@ -289,20 +58,14 @@ function NewAISale() {
 
       await api.post("/sales/ia", {
         cliente_nome: clienteNome.trim() || null,
+        data_venda: dataVenda,
         mensagem_original: mensagem,
-        itens: itens.map((item) => ({
-          produto_id: item.produto_id,
-          quantidade: item.quantidade,
-        })),
       });
 
       setMensagemSucesso("Venda registrada com sucesso.");
       setClienteNome("");
+      setDataVenda(new Date().toISOString().slice(0, 10));
       setMensagem("");
-      setItens([]);
-      setValorTotal(0);
-      limparProdutoManual();
-      fecharCadastroProduto();
     } catch (error) {
       setErro(error.response?.data?.message || "Erro ao salvar venda.");
     } finally {
@@ -314,10 +77,11 @@ function NewAISale() {
     <div style={styles.page}>
       <header style={styles.pageHeader}>
         <div>
-          <p style={styles.pageMini}>IA</p>
-          <h1 style={styles.pageTitle(isMobile)}>Nova venda com IA</h1>
+          <p style={styles.pageMini}>Pedido por texto</p>
+          <h1 style={styles.pageTitle(isMobile)}>Registrar venda do catálogo</h1>
           <p style={styles.pageSubtitle}>
-            Cole a mensagem do cliente, deixe a IA sugerir os itens e confirme a venda.
+            Cole a mensagem gerada pelo carrinho. O sistema identifica o total e
+            registra a venda no dashboard, ranking e histórico.
           </p>
         </div>
       </header>
@@ -326,314 +90,90 @@ function NewAISale() {
       {mensagemSucesso && <p style={styles.sucesso}>{mensagemSucesso}</p>}
 
       <section
-        style={styles.chatBoard(
-          isMobile ? "1fr" : isTablet ? "1fr" : "300px 1fr",
+        style={styles.board(
+          isMobile ? "1fr" : isTablet ? "1fr" : "320px 1fr",
           isMobile
         )}
       >
         <aside style={styles.sidebar(isMobile)}>
           <div style={styles.darkCard}>
-            <p style={styles.darkMini}>Assistente</p>
-            <h3 style={styles.darkTitle}>Interpretação inteligente</h3>
+            <p style={styles.darkMini}>Venda rápida</p>
+            <h3 style={styles.darkTitle}>Somador de pedido</h3>
             <p style={styles.darkText}>
-              A IA lê a mensagem, sugere os produtos do catálogo e você revisa antes de salvar.
+              Não precisa reconhecer produto por produto. Basta colar o texto do
+              pedido e confirmar.
             </p>
           </div>
 
           <div style={styles.summaryCard}>
-            <label style={styles.fieldLabel}>Cliente</label>
-            <input
-              placeholder="Nome do cliente"
-              value={clienteNome}
-              onChange={(e) => setClienteNome(e.target.value)}
-              style={styles.clientInput}
-            />
+            <div style={styles.fieldGroup}>
+              <label style={styles.fieldLabel}>Cliente</label>
+              <input
+                placeholder="Nome do cliente"
+                value={clienteNome}
+                onChange={(e) => setClienteNome(e.target.value)}
+                style={styles.input}
+              />
+            </div>
 
-            <p style={styles.summaryMini}>Resumo</p>
-            <h3 style={styles.summaryValue}>R$ {valorTotal.toFixed(2)}</h3>
+            <div style={styles.fieldGroup}>
+              <label style={styles.fieldLabel}>Data da venda</label>
+              <input
+                type="date"
+                value={dataVenda}
+                onChange={(e) => setDataVenda(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+
+            <p style={styles.summaryMini}>Total detectado</p>
+            <h3 style={styles.summaryValue}>R$ {valorDetectado.toFixed(2)}</h3>
+
             <p style={styles.summaryText}>
-              {itens.length} {itens.length === 1 ? "item na venda" : "itens na venda"}
+              Esse valor será registrado como venda do dia e entrará no ranking
+              semanal.
             </p>
 
             <button
               onClick={confirmarVenda}
-              disabled={salvando || itens.length === 0}
+              disabled={salvando || !mensagem.trim()}
               style={styles.confirmButton}
             >
-              {salvando ? "Salvando..." : "Confirmar venda"}
+              {salvando ? "Salvando..." : "Registrar venda"}
             </button>
           </div>
         </aside>
 
-        <div style={styles.chatArea(isMobile)}>
-          <div style={styles.chatTop}>
-            <h2 style={styles.chatTitle}>Conversa</h2>
+        <div style={styles.content(isMobile)}>
+          <div style={styles.contentHeader}>
+            <h2 style={styles.contentTitle}>Mensagem do pedido</h2>
+            <p style={styles.contentSubtitle}>
+              Cole aqui o texto copiado do carrinho do catálogo.
+            </p>
           </div>
 
-          <div style={styles.chatBody(isMobile)}>
-            <div style={styles.messageAssistant}>
-              <div style={styles.messageBubbleAssistant(isMobile)}>
-                Cole abaixo a mensagem do cliente para eu identificar os itens da venda.
-              </div>
-            </div>
+          <textarea
+            placeholder={`Exemplo:
 
-            {mensagem.trim() && (
-              <div style={styles.messageUser}>
-                <div style={styles.messageBubbleUser(isMobile)}>{mensagem}</div>
-              </div>
+Pedido de João
+
+2x Pomada Matte - R$ 40,00
+1x Gel Cola - R$ 25,00
+
+Total: R$ 65,00`}
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            style={styles.textarea(isMobile)}
+          />
+
+          <div style={styles.previewBox}>
+            <p style={styles.previewMini}>Prévia</p>
+
+            {mensagem.trim() ? (
+              <pre style={styles.previewText}>{mensagem}</pre>
+            ) : (
+              <p style={styles.emptyText}>Nenhuma mensagem colada ainda.</p>
             )}
-
-            <div style={styles.messageAssistant}>
-              <div style={styles.resultBox}>
-                <div style={styles.resultHeader}>
-                  <h3 style={styles.resultTitle}>Itens da venda</h3>
-                </div>
-
-                {itens.length > 0 && (
-                  <div style={styles.resultList}>
-                    {itens.map((item, index) => (
-                      <div key={index} style={styles.resultItem(isMobile)}>
-                        <div style={styles.resultItemLeft}>
-                          <div style={styles.aiBadge}>IA</div>
-
-                          <div>
-                            <p style={styles.resultName}>{item.produto_nome}</p>
-                            <p style={styles.resultMeta}>
-                              R$ {Number(item.preco_unitario).toFixed(2)} por unidade
-                            </p>
-                          </div>
-                        </div>
-
-                        <div style={styles.resultItemRight(isMobile)}>
-                          <div style={styles.productSelectBox}>
-                            <label style={styles.qtyLabel}>Produto</label>
-                            <select
-                              value={item.produto_id || ""}
-                              onChange={(e) => alterarProduto(index, e.target.value)}
-                              style={styles.productSelect}
-                            >
-                              <option value="">Selecione</option>
-
-                              {produtos.map((produto) => (
-                                <option key={produto.id} value={produto.id}>
-                                  {produto.nome} - R$ {Number(produto.preco).toFixed(2)}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div style={styles.quantityBox}>
-                            <label style={styles.qtyLabel}>Qtd.</label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={item.quantidade}
-                              onChange={(e) => alterarQuantidade(index, e.target.value)}
-                              style={styles.qtyInput}
-                            />
-                          </div>
-
-                          <div style={styles.subtotalBox}>
-                            <span style={styles.subtotalLabel}>Subtotal</span>
-                            <strong style={styles.subtotalValue}>
-                              R$ {(item.preco_unitario * item.quantidade).toFixed(2)}
-                            </strong>
-                          </div>
-
-                          <button
-                            onClick={() => removerItem(index)}
-                            style={styles.removeButton(isMobile)}
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {itens.length === 0 && (
-                  <p style={styles.emptyText}>
-                    Nenhum item adicionado ainda. Use a IA ou adicione manualmente.
-                  </p>
-                )}
-
-                <div style={styles.manualAddBox}>
-                  <div style={styles.manualFields}>
-                    <div style={styles.manualSearchBox}>
-                      <label style={styles.qtyLabel}>Adicionar produto</label>
-
-                      <input
-                        placeholder={
-                          carregandoProdutos
-                            ? "Carregando produtos..."
-                            : "Digite o nome do produto..."
-                        }
-                        value={produtoManualBusca}
-                        onChange={(e) => {
-                          setProdutoManualBusca(e.target.value);
-                          setProdutoManualSelecionado(null);
-                          setCadastroAberto(false);
-                        }}
-                        disabled={carregandoProdutos}
-                        style={styles.manualSearchInput}
-                      />
-
-                      {produtoManualBusca.trim() &&
-                        !produtoManualSelecionado &&
-                        produtosFiltrados.length > 0 && (
-                          <div style={styles.manualResults}>
-                            {produtosFiltrados.map((produto) => (
-                              <button
-                                key={produto.id}
-                                type="button"
-                                onClick={() => selecionarProdutoManual(produto)}
-                                style={styles.manualResultItem}
-                              >
-                                <span style={styles.manualResultName}>
-                                  {produto.nome}
-                                </span>
-                                <strong style={styles.manualResultPrice}>
-                                  R$ {Number(produto.preco).toFixed(2)}
-                                </strong>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                      {produtoManualBusca.trim() &&
-                        !produtoManualSelecionado &&
-                        produtosFiltrados.length === 0 && (
-                          <div style={styles.manualEmptyResult}>
-                            <span>Nenhum produto encontrado.</span>
-                            <button
-                              type="button"
-                              onClick={abrirCadastroProduto}
-                              style={styles.inlineCreateButton}
-                            >
-                              Cadastrar produto
-                            </button>
-                          </div>
-                        )}
-                    </div>
-
-                    <div style={styles.quantityBox}>
-                      <label style={styles.qtyLabel}>Qtd.</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={quantidadeManual}
-                        onChange={(e) => setQuantidadeManual(e.target.value)}
-                        style={styles.qtyInput}
-                      />
-                    </div>
-                  </div>
-
-                  {produtoManualSelecionado && (
-                    <div style={styles.selectedProductBox}>
-                      <div style={styles.selectedProductInfo}>
-                        <span style={styles.selectedProductLabel}>Selecionado</span>
-                        <strong style={styles.selectedProductName}>
-                          {produtoManualSelecionado.nome}
-                        </strong>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={limparProdutoManual}
-                        style={styles.clearProductButton}
-                      >
-                        Trocar
-                      </button>
-                    </div>
-                  )}
-
-                  <button onClick={adicionarProdutoManual} style={styles.addManualButton}>
-                    Adicionar à venda
-                  </button>
-
-                  {cadastroAberto && (
-                    <div style={styles.createProductBox}>
-                      <div style={styles.createProductHeader}>
-                        <h4 style={styles.createProductTitle}>Cadastrar produto</h4>
-
-                        <button
-                          type="button"
-                          onClick={fecharCadastroProduto}
-                          style={styles.closeCreateButton}
-                        >
-                          Fechar
-                        </button>
-                      </div>
-
-                      <div style={styles.createProductGrid(isMobile)}>
-                        <div style={styles.createField}>
-                          <label style={styles.qtyLabel}>Nome</label>
-                          <input
-                            value={novoProdutoNome}
-                            onChange={(e) => setNovoProdutoNome(e.target.value)}
-                            placeholder="Nome do produto"
-                            style={styles.createInput}
-                          />
-                        </div>
-
-                        <div style={styles.createField}>
-                          <label style={styles.qtyLabel}>Preço venda</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={novoProdutoPreco}
-                            onChange={(e) => setNovoProdutoPreco(e.target.value)}
-                            placeholder="0.00"
-                            style={styles.createInput}
-                          />
-                        </div>
-
-                        <div style={styles.createField}>
-                          <label style={styles.qtyLabel}>Preço custo</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={novoProdutoPrecoCusto}
-                            onChange={(e) => setNovoProdutoPrecoCusto(e.target.value)}
-                            placeholder="0.00"
-                            style={styles.createInput}
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={cadastrarProdutoNaVenda}
-                        disabled={cadastrandoProduto}
-                        style={styles.createProductButton}
-                      >
-                        {cadastrandoProduto
-                          ? "Cadastrando..."
-                          : "Cadastrar e adicionar à venda"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.chatInputArea(isMobile)}>
-            <textarea
-              placeholder="Cole a mensagem do cliente aqui..."
-              value={mensagem}
-              onChange={(e) => setMensagem(e.target.value)}
-              style={styles.textarea}
-            />
-
-            <button
-              onClick={interpretarMensagem}
-              disabled={loading || !mensagem.trim()}
-              style={styles.primaryButton(isMobile)}
-            >
-              {loading ? "Interpretando..." : "Interpretar mensagem"}
-            </button>
           </div>
         </div>
       </section>
@@ -670,6 +210,7 @@ const styles = {
   pageSubtitle: {
     color: "#666",
     fontSize: "15px",
+    lineHeight: 1.6,
   },
   erro: {
     color: "#b00020",
@@ -679,7 +220,7 @@ const styles = {
     color: "#0a7d32",
     fontWeight: 600,
   },
-  chatBoard: (columns, isMobile) => ({
+  board: (columns, isMobile) => ({
     display: "grid",
     gridTemplateColumns: columns,
     gap: "20px",
@@ -727,7 +268,12 @@ const styles = {
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: "12px",
+  },
+  fieldGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
   },
   fieldLabel: {
     fontSize: "12px",
@@ -736,7 +282,7 @@ const styles = {
     color: "#7b7b7b",
     fontWeight: 700,
   },
-  clientInput: {
+  input: {
     height: "46px",
     borderRadius: "12px",
     border: "1px solid #ddd",
@@ -745,7 +291,6 @@ const styles = {
     color: "#111",
     fontSize: "14px",
     background: "#faf9f7",
-    marginBottom: "8px",
   },
   summaryMini: {
     fontSize: "12px",
@@ -753,6 +298,7 @@ const styles = {
     letterSpacing: "0.08em",
     color: "#7b7b7b",
     fontWeight: 700,
+    marginTop: "6px",
   },
   summaryValue: {
     fontSize: "42px",
@@ -776,462 +322,77 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
-  chatArea: (isMobile) => ({
+  content: (isMobile) => ({
     background: "#fff",
     borderRadius: "24px",
+    padding: "22px",
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
     display: "flex",
     flexDirection: "column",
+    gap: "16px",
     minHeight: 0,
     overflow: "hidden",
     height: isMobile ? "auto" : "100%",
   }),
-  chatTop: {
-    padding: "22px 22px 0 22px",
+  contentHeader: {
     flexShrink: 0,
   },
-  chatTitle: {
+  contentTitle: {
     fontSize: "22px",
     fontWeight: 800,
     color: "#111",
     letterSpacing: "-0.03em",
+    marginBottom: "6px",
   },
-  chatBody: (isMobile) => ({
-    flex: isMobile ? "unset" : 1,
-    minHeight: 0,
-    overflowY: isMobile ? "visible" : "auto",
-    padding: "22px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  }),
-  messageAssistant: {
-    display: "flex",
-    justifyContent: "flex-start",
-  },
-  messageUser: {
-    display: "flex",
-    justifyContent: "flex-end",
-  },
-  messageBubbleAssistant: (isMobile) => ({
-    maxWidth: isMobile ? "100%" : "70%",
-    background: "#f5f2ec",
-    color: "#111",
-    padding: "14px 16px",
-    borderRadius: "18px 18px 18px 6px",
-    lineHeight: 1.6,
+  contentSubtitle: {
+    color: "#666",
     fontSize: "14px",
-  }),
-  messageBubbleUser: (isMobile) => ({
-    maxWidth: isMobile ? "100%" : "70%",
-    background: "#111",
-    color: "#fff",
-    padding: "14px 16px",
-    borderRadius: "18px 18px 6px 18px",
     lineHeight: 1.6,
-    fontSize: "14px",
-    whiteSpace: "pre-wrap",
-  }),
-  resultBox: {
+  },
+  textarea: (isMobile) => ({
     width: "100%",
-    background: "#f8f6f2",
-    borderRadius: "22px",
-    padding: "18px",
-    border: "1px solid #eee8df",
-  },
-  resultHeader: {
-    marginBottom: "14px",
-  },
-  resultTitle: {
-    fontSize: "18px",
-    fontWeight: 800,
+    minHeight: isMobile ? "260px" : "300px",
+    flex: isMobile ? "unset" : 1,
+    resize: "none",
+    borderRadius: "18px",
+    border: "1px solid #ddd",
+    padding: "16px",
+    fontSize: "14px",
+    lineHeight: 1.6,
+    outline: "none",
+    background: "#faf9f7",
     color: "#111",
-  },
-  resultList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  },
-  resultItem: (isMobile) => ({
-    background: "#fff",
+  }),
+  previewBox: {
+    background: "#f8f6f2",
     borderRadius: "18px",
     padding: "16px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "stretch" : "center",
-    gap: "16px",
     border: "1px solid #eee8df",
-    flexDirection: isMobile ? "column" : "row",
-  }),
-  resultItemLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
+    maxHeight: "180px",
+    overflowY: "auto",
   },
-  aiBadge: {
-    width: "40px",
-    height: "40px",
-    borderRadius: "12px",
-    background: "rgba(31,79,163,0.10)",
-    color: "#1f4fa3",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 800,
-    fontSize: "13px",
-    flexShrink: 0,
-  },
-  resultName: {
-    fontSize: "18px",
-    fontWeight: 800,
-    color: "#111",
-    marginBottom: "4px",
-  },
-  resultMeta: {
-    color: "#666",
-    fontSize: "13px",
-  },
-  resultItemRight: (isMobile) => ({
-    display: "flex",
-    alignItems: isMobile ? "stretch" : "center",
-    gap: "10px",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    flexDirection: isMobile ? "column" : "row",
-    maxWidth: isMobile ? "100%" : "560px",
-  }),
-  productSelectBox: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    width: "180px",
-    maxWidth: "100%",
-  },
-  productSelect: {
-    width: "100%",
-    height: "42px",
-    borderRadius: "12px",
-    border: "1px solid #ddd",
-    padding: "0 8px",
-    background: "#fff",
-    color: "#111",
-    fontWeight: 600,
-    fontSize: "13px",
-  },
-  quantityBox: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  qtyLabel: {
+  previewMini: {
     fontSize: "12px",
     textTransform: "uppercase",
     letterSpacing: "0.08em",
     color: "#7b7b7b",
     fontWeight: 700,
+    marginBottom: "8px",
   },
-  qtyInput: {
-    width: "80px",
-    height: "42px",
-    borderRadius: "12px",
-    border: "1px solid #ddd",
-    padding: "0 10px",
+  previewText: {
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    fontSize: "13px",
+    lineHeight: 1.6,
+    color: "#333",
+    margin: 0,
+    fontFamily: "inherit",
   },
-  subtotalBox: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  subtotalLabel: {
-    fontSize: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#7b7b7b",
-    fontWeight: 700,
-  },
-  subtotalValue: {
-    fontSize: "16px",
-    fontWeight: 800,
-    color: "#111",
-  },
-  removeButton: (isMobile) => ({
-    height: "42px",
-    padding: "0 16px",
-    borderRadius: "999px",
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontWeight: 700,
-    cursor: "pointer",
-    width: isMobile ? "100%" : "auto",
-  }),
   emptyText: {
     color: "#666",
     fontSize: "14px",
     lineHeight: 1.6,
   },
-  manualAddBox: {
-    marginTop: "16px",
-    padding: "16px",
-    borderRadius: "18px",
-    background: "#fff",
-    border: "1px dashed #d8d0c4",
-    display: "flex",
-    alignItems: "end",
-    justifyContent: "space-between",
-    gap: "14px",
-    flexWrap: "wrap",
-  },
-  manualFields: {
-    display: "flex",
-    alignItems: "end",
-    gap: "14px",
-    flexWrap: "wrap",
-  },
-  manualSearchBox: {
-    position: "relative",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    width: "280px",
-    maxWidth: "100%",
-  },
-  manualSearchInput: {
-    width: "100%",
-    height: "42px",
-    borderRadius: "12px",
-    border: "1px solid #ddd",
-    padding: "0 10px",
-    background: "#fff",
-    color: "#111",
-    fontWeight: 600,
-    fontSize: "13px",
-    outline: "none",
-  },
-  manualResults: {
-    position: "absolute",
-    top: "66px",
-    left: 0,
-    right: 0,
-    zIndex: 20,
-    background: "#fff",
-    border: "1px solid #ddd",
-    borderRadius: "14px",
-    boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
-    overflow: "hidden",
-    maxHeight: "240px",
-    overflowY: "auto",
-  },
-  manualResultItem: {
-    width: "100%",
-    border: "none",
-    background: "#fff",
-    padding: "11px 12px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "10px",
-    cursor: "pointer",
-    textAlign: "left",
-    borderBottom: "1px solid #f1eee8",
-  },
-  manualResultName: {
-    minWidth: 0,
-    color: "#111",
-    fontSize: "13px",
-    fontWeight: 800,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  manualResultPrice: {
-    color: "#1f4fa3",
-    fontSize: "12px",
-    fontWeight: 900,
-    whiteSpace: "nowrap",
-  },
-  manualEmptyResult: {
-    position: "absolute",
-    top: "66px",
-    left: 0,
-    right: 0,
-    zIndex: 20,
-    background: "#fff",
-    border: "1px solid #ddd",
-    borderRadius: "14px",
-    padding: "12px",
-    color: "#666",
-    fontSize: "13px",
-    boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  inlineCreateButton: {
-    height: "34px",
-    borderRadius: "999px",
-    border: "none",
-    background: "#1f4fa3",
-    color: "#fff",
-    fontSize: "12px",
-    fontWeight: 800,
-    cursor: "pointer",
-    width: "100%",
-  },
-  selectedProductBox: {
-    minHeight: "42px",
-    borderRadius: "14px",
-    background: "#f8f6f2",
-    border: "1px solid #eee8df",
-    padding: "9px 12px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "12px",
-    flex: "1 1 240px",
-    minWidth: 0,
-  },
-  selectedProductInfo: {
-    minWidth: 0,
-  },
-  selectedProductLabel: {
-    display: "block",
-    fontSize: "10px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#8a8a8a",
-    fontWeight: 800,
-    marginBottom: "2px",
-  },
-  selectedProductName: {
-    display: "block",
-    color: "#111",
-    fontSize: "13px",
-    fontWeight: 900,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  clearProductButton: {
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    borderRadius: "999px",
-    padding: "8px 12px",
-    fontSize: "12px",
-    fontWeight: 800,
-    cursor: "pointer",
-    flexShrink: 0,
-  },
-  addManualButton: {
-    height: "42px",
-    padding: "0 16px",
-    borderRadius: "12px",
-    border: "none",
-    background: "#1f4fa3",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  createProductBox: {
-    width: "100%",
-    marginTop: "14px",
-    padding: "16px",
-    borderRadius: "18px",
-    background: "#f8f6f2",
-    border: "1px solid #eee8df",
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  },
-  createProductHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "12px",
-  },
-  createProductTitle: {
-    fontSize: "16px",
-    fontWeight: 900,
-    color: "#111",
-  },
-  closeCreateButton: {
-    height: "34px",
-    padding: "0 12px",
-    borderRadius: "999px",
-    border: "1px solid #ddd",
-    background: "#fff",
-    color: "#111",
-    fontSize: "12px",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  createProductGrid: (isMobile) => ({
-    display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr 1fr",
-    gap: "10px",
-  }),
-  createField: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    minWidth: 0,
-  },
-  createInput: {
-    width: "100%",
-    height: "42px",
-    borderRadius: "12px",
-    border: "1px solid #ddd",
-    padding: "0 10px",
-    background: "#fff",
-    color: "#111",
-    fontWeight: 600,
-    fontSize: "13px",
-    outline: "none",
-  },
-  createProductButton: {
-    height: "44px",
-    padding: "0 16px",
-    borderRadius: "12px",
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  chatInputArea: (isMobile) => ({
-    padding: "18px 22px 22px 22px",
-    borderTop: "1px solid #eee8df",
-    display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
-    gap: "14px",
-    alignItems: "end",
-    flexShrink: 0,
-  }),
-  textarea: {
-    minHeight: "110px",
-    maxHeight: "110px",
-    resize: "none",
-    borderRadius: "18px",
-    border: "1px solid #ddd",
-    padding: "14px 16px",
-    fontSize: "14px",
-    lineHeight: 1.6,
-    outline: "none",
-    background: "#faf9f7",
-  },
-  primaryButton: (isMobile) => ({
-    height: "52px",
-    padding: "0 18px",
-    borderRadius: "14px",
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-    minWidth: isMobile ? "100%" : "190px",
-    width: isMobile ? "100%" : "auto",
-  }),
 };
 
 export default NewAISale;

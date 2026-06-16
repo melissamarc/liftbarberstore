@@ -22,6 +22,11 @@ async function rankingVendedores(req, res) {
           SUM(valor_total) AS total_vendido,
           COUNT(id) AS quantidade_vendas
         FROM vendas
+        WHERE data_criacao >= DATE_SUB(CURDATE(), INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY)
+          AND data_criacao < DATE_ADD(
+            DATE_SUB(CURDATE(), INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY),
+            INTERVAL 7 DAY
+          )
         GROUP BY usuario_id
       ) vendas_resumo ON vendas_resumo.usuario_id = u.id
 
@@ -31,6 +36,11 @@ async function rankingVendedores(req, res) {
           SUM(iv.quantidade) AS quantidade_itens_vendidos
         FROM vendas v
         INNER JOIN itens_venda iv ON iv.venda_id = v.id
+        WHERE v.data_criacao >= DATE_SUB(CURDATE(), INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY)
+          AND v.data_criacao < DATE_ADD(
+            DATE_SUB(CURDATE(), INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY),
+            INTERVAL 7 DAY
+          )
         GROUP BY v.usuario_id
       ) itens_resumo ON itens_resumo.usuario_id = u.id
 

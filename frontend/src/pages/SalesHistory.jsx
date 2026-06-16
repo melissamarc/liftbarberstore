@@ -15,6 +15,8 @@ function SalesHistory() {
   const [vendaEditando, setVendaEditando] = useState(null);
   const [editClienteNome, setEditClienteNome] = useState("");
   const [editDataVenda, setEditDataVenda] = useState("");
+  const [editTextoOriginal, setEditTextoOriginal] = useState("");
+  const [editValorTotal, setEditValorTotal] = useState("");
   const [editItens, setEditItens] = useState([]);
   const [editBuscaProduto, setEditBuscaProduto] = useState("");
   const [editProdutoSelecionado, setEditProdutoSelecionado] = useState(null);
@@ -41,10 +43,14 @@ function SalesHistory() {
   }, [produtos, editBuscaProduto]);
 
   const totalEdicao = useMemo(() => {
+    if (vendaEditando?.origem === "ia") {
+      return Number(editValorTotal || 0);
+    }
+
     return editItens.reduce((acc, item) => {
       return acc + Number(item.preco || 0) * Number(item.quantidade || 0);
     }, 0);
-  }, [editItens]);
+  }, [editItens, editValorTotal, vendaEditando]);
 
   async function carregarHistorico() {
     try {
@@ -69,9 +75,7 @@ function SalesHistory() {
   async function carregarProdutos() {
     try {
       setLoadingProdutos(true);
-
       const response = await api.get("/products");
-
       setProdutos(response.data || []);
     } catch (error) {
       setErro("Erro ao carregar produtos.");
@@ -102,7 +106,6 @@ function SalesHistory() {
 
   async function excluirVenda(id) {
     const confirmar = window.confirm("Tem certeza que deseja excluir esta venda?");
-
     if (!confirmar) return;
 
     try {
@@ -170,6 +173,8 @@ function SalesHistory() {
     setVendaEditando(venda);
     setEditClienteNome(venda.cliente_nome || "");
     setEditDataVenda(formatarDataInput(venda.data_venda || venda.data_criacao));
+    setEditTextoOriginal(venda.texto_original || "");
+    setEditValorTotal(Number(venda.valor_total || 0).toFixed(2));
     setEditItens(itensFormatados);
     setEditBuscaProduto("");
     setEditProdutoSelecionado(null);
@@ -182,6 +187,8 @@ function SalesHistory() {
     setVendaEditando(null);
     setEditClienteNome("");
     setEditDataVenda("");
+    setEditTextoOriginal("");
+    setEditValorTotal("");
     setEditItens([]);
     setEditBuscaProduto("");
     setEditProdutoSelecionado(null);
@@ -266,21 +273,43 @@ function SalesHistory() {
 
       if (!vendaEditando) return;
 
-      if (editItens.length === 0) {
-        setErro("Adicione pelo menos um item à venda.");
-        return;
-      }
-
       setSalvandoEdicao(true);
 
-      await api.put(`/sales/${vendaEditando.id}`, {
-        cliente_nome: editClienteNome,
-        data_venda: editDataVenda,
-        itens: editItens.map((item) => ({
-          produto_id: item.produto_id,
-          quantidade: item.quantidade,
-        })),
-      });
+      if (vendaEditando.origem === "manual") {
+        if (editItens.length === 0) {
+          setErro("Adicione pelo menos um item à venda.");
+          setSalvandoEdicao(false);
+          return;
+        }
+
+        await api.put(`/sales/${vendaEditando.id}`, {
+          cliente_nome: editClienteNome,
+          data_venda: editDataVenda,
+          itens: editItens.map((item) => ({
+            produto_id: item.produto_id,
+            quantidade: item.quantidade,
+          })),
+        });
+      } else {
+        if (!editTextoOriginal.trim()) {
+          setErro("A mensagem original é obrigatória.");
+          setSalvandoEdicao(false);
+          return;
+        }
+
+        if (!Number(editValorTotal) || Number(editValorTotal) <= 0) {
+          setErro("Informe um valor total válido.");
+          setSalvandoEdicao(false);
+          return;
+        }
+
+        await api.put(`/sales/${vendaEditando.id}`, {
+          cliente_nome: editClienteNome,
+          data_venda: editDataVenda,
+          mensagem_original: editTextoOriginal,
+          valor_total: Number(editValorTotal),
+        });
+      }
 
       setMensagem("Venda atualizada com sucesso.");
       fecharEdicao();
@@ -293,17 +322,33 @@ function SalesHistory() {
   }
 
   function montarHtmlPedido(venda) {
-    const itens = venda.itens || [];
     const nomeCliente = venda.cliente_nome || "Cliente não informado";
+    const total = Number(venda.valor_total || 0);
+
+    if (venda.origem === "ia") {
+      return `
+        <section class="pedido">
+          <div class="cliente-topo">${escaparHtml(nomeCliente)}</div>
+          <h1>PEDIDO - ${gerarNumeroPedido(venda)}</h1>
+
+          <h2>Pedido do catálogo</h2>
+          <pre>${escaparHtml(venda.texto_original || "Mensagem não disponível.")}</pre>
+
+          <div class="totais">
+            <p class="total">Total: ${formatarMoeda(total)}</p>
+          </div>
+
+          <h2>Cliente</h2>
+          <p>Nome: ${escaparHtml(nomeCliente)}</p>
+        </section>
+      `;
+    }
+
+    const itens = venda.itens || [];
 
     const subtotal = itens.reduce((acc, item) => {
       return acc + Number(item.subtotal || 0);
     }, 0);
-
-    const cupom = Number(venda.valor_cupom || 0);
-    const desconto = Number(venda.desconto || 0);
-    const frete = Number(venda.frete || 0);
-    const total = Number(venda.valor_total || subtotal);
 
     const produtosHtml =
       itens.length > 0
@@ -330,9 +375,6 @@ function SalesHistory() {
 
         <div class="totais">
           <p>Subtotal: ${formatarMoeda(subtotal || total)}</p>
-          <p>Cupom: ${formatarMoeda(cupom)}</p>
-          <p>Desconto: ${formatarMoeda(desconto)}</p>
-          <p>Frete: ${formatarMoeda(frete)}</p>
           <p class="total">Total: ${formatarMoeda(total)}</p>
         </div>
 
@@ -402,6 +444,16 @@ function SalesHistory() {
               font-size: 15px;
               line-height: 1.5;
               margin: 4px 0;
+            }
+            pre {
+              font-family: Arial, sans-serif;
+              white-space: pre-wrap;
+              word-break: break-word;
+              background: #f5f5f5;
+              border-radius: 12px;
+              padding: 14px;
+              font-size: 14px;
+              line-height: 1.5;
             }
             .totais { margin-top: 18px; }
             .total {
@@ -532,27 +584,18 @@ function SalesHistory() {
                             : styles.originManual),
                         }}
                       >
-                        {venda.origem === "ia" ? "Venda com IA" : "Venda manual"}
+                        {venda.origem === "ia" ? "Venda Catálogo" : "Venda Manual"}
                       </span>
 
-                      <button
-                        onClick={() => abrirEdicao(venda)}
-                        style={styles.editButton}
-                      >
+                      <button onClick={() => abrirEdicao(venda)} style={styles.editButton}>
                         Editar
                       </button>
 
-                      <button
-                        onClick={() => exportarVendaPdf(venda)}
-                        style={styles.pdfButton}
-                      >
+                      <button onClick={() => exportarVendaPdf(venda)} style={styles.pdfButton}>
                         PDF
                       </button>
 
-                      <button
-                        onClick={() => excluirVenda(venda.id)}
-                        style={styles.deleteButton}
-                      >
+                      <button onClick={() => excluirVenda(venda.id)} style={styles.deleteButton}>
                         Excluir
                       </button>
                     </div>
@@ -641,95 +684,129 @@ function SalesHistory() {
                   />
                 </div>
 
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>Buscar produto</label>
-                  <input
-                    type="text"
-                    value={editBuscaProduto}
-                    onChange={(e) => {
-                      setEditBuscaProduto(e.target.value);
-                      setEditProdutoSelecionado(null);
-                    }}
-                    placeholder={
-                      loadingProdutos
-                        ? "Carregando produtos..."
-                        : "Digite o nome do produto..."
-                    }
-                    disabled={loadingProdutos}
-                    style={styles.input}
-                  />
+                                {vendaEditando.origem === "ia" ? (
+                  <>
+                    <div style={styles.fieldGroup}>
+                      <label style={styles.label}>Valor total</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editValorTotal}
+                        onChange={(e) => setEditValorTotal(e.target.value)}
+                        style={styles.input}
+                      />
+                    </div>
 
-                  {editBuscaProduto && (
-                    <div style={styles.productSearchList}>
-                      {produtosFiltrados.length === 0 ? (
-                        <p style={styles.noProducts}>Nenhum produto encontrado.</p>
-                      ) : (
-                        produtosFiltrados.map((produto) => {
-                          const fotoUrl = getImageUrl(produto.foto_produto);
+                    <div style={styles.fieldGroup}>
+                      <label style={styles.label}>Mensagem original</label>
+                      <textarea
+                        value={editTextoOriginal}
+                        onChange={(e) => setEditTextoOriginal(e.target.value)}
+                        style={styles.editTextarea}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={styles.fieldGroup}>
+                      <label style={styles.label}>Buscar produto</label>
+                      <input
+                        type="text"
+                        value={editBuscaProduto}
+                        onChange={(e) => {
+                          setEditBuscaProduto(e.target.value);
+                          setEditProdutoSelecionado(null);
+                        }}
+                        placeholder={
+                          loadingProdutos
+                            ? "Carregando produtos..."
+                            : "Digite o nome do produto..."
+                        }
+                        disabled={loadingProdutos}
+                        style={styles.input}
+                      />
 
-                          return (
-                            <button
-                              key={produto.id}
-                              type="button"
-                              onClick={() => selecionarProdutoEdicao(produto)}
-                              style={{
-                                ...styles.productOption,
-                                ...(editProdutoSelecionado?.id === produto.id
-                                  ? styles.productOptionActive
-                                  : {}),
-                              }}
-                            >
-                              {fotoUrl ? (
-                                <img
-                                  src={fotoUrl}
-                                  alt={produto.nome}
-                                  style={styles.productOptionImage}
-                                />
-                              ) : (
-                                <div style={styles.productOptionImageEmpty}>IMG</div>
-                              )}
+                      {editBuscaProduto && (
+                        <div style={styles.productSearchList}>
+                          {produtosFiltrados.length === 0 ? (
+                            <p style={styles.noProducts}>
+                              Nenhum produto encontrado.
+                            </p>
+                          ) : (
+                            produtosFiltrados.map((produto) => {
+                              const fotoUrl = getImageUrl(produto.foto_produto);
 
-                              <div style={styles.productOptionInfo}>
-                                <strong style={styles.productOptionName}>
-                                  {produto.nome}
-                                </strong>
-                                <span style={styles.productOptionPrice}>
-                                  {formatarMoeda(produto.preco)}
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })
+                              return (
+                                <button
+                                  key={produto.id}
+                                  type="button"
+                                  onClick={() => selecionarProdutoEdicao(produto)}
+                                  style={{
+                                    ...styles.productOption,
+                                    ...(editProdutoSelecionado?.id === produto.id
+                                      ? styles.productOptionActive
+                                      : {}),
+                                  }}
+                                >
+                                  {fotoUrl ? (
+                                    <img
+                                      src={fotoUrl}
+                                      alt={produto.nome}
+                                      style={styles.productOptionImage}
+                                    />
+                                  ) : (
+                                    <div style={styles.productOptionImageEmpty}>
+                                      IMG
+                                    </div>
+                                  )}
+
+                                  <div style={styles.productOptionInfo}>
+                                    <strong style={styles.productOptionName}>
+                                      {produto.nome}
+                                    </strong>
+                                    <span style={styles.productOptionPrice}>
+                                      {formatarMoeda(produto.preco)}
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
 
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>Quantidade</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editQuantidade}
-                    onChange={(e) => setEditQuantidade(e.target.value)}
-                    style={styles.input}
-                  />
-                </div>
+                    <div style={styles.fieldGroup}>
+                      <label style={styles.label}>Quantidade</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={editQuantidade}
+                        onChange={(e) => setEditQuantidade(e.target.value)}
+                        style={styles.input}
+                      />
+                    </div>
 
-                <button onClick={adicionarItemEdicao} style={styles.primaryButton}>
-                  Adicionar item
-                </button>
+                    <button onClick={adicionarItemEdicao} style={styles.primaryButton}>
+                      Adicionar item
+                    </button>
+                  </>
+                )}
 
                 <div style={styles.editSummary}>
                   <p style={styles.darkMini}>Resumo</p>
                   <h3 style={styles.darkBig}>{formatarMoeda(totalEdicao)}</h3>
                   <p style={styles.darkText}>
-                    {editItens.length} {editItens.length === 1 ? "item" : "itens"} na venda
+                    {vendaEditando.origem === "ia"
+                      ? "Venda do catálogo por texto"
+                      : `${editItens.length} ${
+                          editItens.length === 1 ? "item" : "itens"
+                        } na venda`}
                   </p>
 
                   <button
                     onClick={salvarEdicaoVenda}
-                    disabled={salvandoEdicao || editItens.length === 0}
+                    disabled={salvandoEdicao}
                     style={styles.darkButton}
                   >
                     {salvandoEdicao ? "Salvando..." : "Salvar alterações"}
@@ -738,13 +815,26 @@ function SalesHistory() {
               </aside>
 
               <div style={styles.editContent}>
-                <h3 style={styles.contentTitle}>Itens da venda</h3>
+                <h3 style={styles.contentTitle}>
+                  {vendaEditando.origem === "ia"
+                    ? "Pedido do catálogo"
+                    : "Itens da venda"}
+                </h3>
 
                 <div style={styles.editItemsViewport}>
-                  {editItens.length === 0 ? (
+                  {vendaEditando.origem === "ia" ? (
+                    <div style={styles.messageBox}>
+                      <span style={styles.messageLabel}>Mensagem original</span>
+                      <p style={styles.messageText}>
+                        {editTextoOriginal || "Mensagem não informada."}
+                      </p>
+                    </div>
+                  ) : editItens.length === 0 ? (
                     <div style={styles.emptyBox}>
                       <p style={styles.emptyTitle}>Nenhum item adicionado</p>
-                      <p style={styles.emptyText}>Busque um produto e monte a venda.</p>
+                      <p style={styles.emptyText}>
+                        Busque um produto e monte a venda.
+                      </p>
                     </div>
                   ) : (
                     <div style={styles.editItemsList}>
@@ -752,7 +842,10 @@ function SalesHistory() {
                         const fotoUrl = getImageUrl(item.foto_produto);
 
                         return (
-                          <div key={item.produto_id} style={styles.editItemCard(isMobile)}>
+                          <div
+                            key={item.produto_id}
+                            style={styles.editItemCard(isMobile)}
+                          >
                             <div style={styles.editItemLeft}>
                               <div style={styles.itemImageBox}>
                                 {fotoUrl ? (
@@ -762,7 +855,9 @@ function SalesHistory() {
                                     style={styles.itemImage}
                                   />
                                 ) : (
-                                  <div style={styles.itemImagePlaceholder}>Sem imagem</div>
+                                  <div style={styles.itemImagePlaceholder}>
+                                    Sem imagem
+                                  </div>
                                 )}
                               </div>
 
@@ -1235,6 +1330,18 @@ const styles = {
     background: "#fff",
     color: "#111",
     fontSize: "14px",
+    outline: "none",
+  },
+  editTextarea: {
+    minHeight: "190px",
+    resize: "vertical",
+    borderRadius: "14px",
+    border: "1px solid #ddd",
+    padding: "14px",
+    background: "#fff",
+    color: "#111",
+    fontSize: "14px",
+    lineHeight: 1.6,
     outline: "none",
   },
   productSearchList: {

@@ -55,9 +55,9 @@ function Dashboard() {
           <h1 style={styles.greetingTitle(isMobile)}>
             Olá, {usuario?.nome?.split(" ")[0] || "Usuário"}!
           </h1>
-          <p style={styles.greetingText}>
-            Aqui está uma visão geral da operação da sua loja hoje.
-          </p>
+         <p style={styles.greetingText}>
+  Aqui está uma visão geral das vendas de hoje e da semana atual, que reinicia toda sexta-feira.
+</p>
         </div>
 
         <div style={styles.searchBox(isMobile)}>
@@ -104,17 +104,17 @@ function Dashboard() {
 
               <div style={styles.metricRow(isMobile)}>
                 <div>
-                  <p style={styles.metricLabel}>Total vendido na semana</p>
+<p style={styles.metricLabel}>Total vendido na semana atual</p>
                   <strong style={styles.metricValue}>
                     R$ {Number(resumo?.total_vendido_semana || 0).toFixed(2)}
                   </strong>
                 </div>
-                <span style={styles.metricTagYellow}>Semana</span>
+<span style={styles.metricTagYellow}>Sex-Qui</span>
               </div>
 
               <div style={styles.metricRow(isMobile)}>
                 <div>
-                  <p style={styles.metricLabel}>Quantidade de vendas na semana</p>
+<p style={styles.metricLabel}>Vendas na semana atual</p>
                   <strong style={styles.metricValue}>
                     {resumo?.quantidade_vendas_semana || 0}
                   </strong>
@@ -173,7 +173,7 @@ function Dashboard() {
               <div style={styles.smallCardTop}>
                 <div>
                   <p style={styles.sectionMini}>Mês atual</p>
-                  <h3 style={styles.smallTitle}>Lucro mensal</h3>
+<h3 style={styles.smallTitle}>Lucro dos produtos</h3>
                 </div>
               </div>
 
@@ -182,8 +182,7 @@ function Dashboard() {
               </div>
 
               <p style={styles.metricText}>
-                lucro calculado com base no custo e preço de venda dos produtos
-              </p>
+lucro calculado apenas nas vendas manuais com produtos cadastrados              </p>
             </div>
 
             <div style={styles.wideCard}>
@@ -276,7 +275,7 @@ function Dashboard() {
             <div style={styles.darkDivider}></div>
 
             <div style={styles.profitBox}>
-              <p style={styles.darkMini}>Maior lucro do mês</p>
+<p style={styles.darkMini}>Maior lucro com produtos</p>
 
               <h3 style={styles.profitTitle}>
                 {resumo?.vendedor_mais_lucrativo?.nome || "Sem dados"}
@@ -288,8 +287,7 @@ function Dashboard() {
             </div>
 
             <div style={styles.profitBox}>
-              <p style={styles.darkMini}>Produto mais lucrativo</p>
-
+<p style={styles.darkMini}>Produto mais lucrativo</p>
               <h3 style={styles.profitTitle}>
                 {resumo?.produto_mais_lucrativo?.nome || "Sem dados"}
               </h3>

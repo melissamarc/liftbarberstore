@@ -1,6 +1,41 @@
 const pool = require("../config/db");
 
-// PROCESSAR ITENS DA VENDA
+function extrairValorTotalDoTexto(texto) {
+  if (!texto || !texto.trim()) {
+    throw new Error("A mensagem do pedido é obrigatória.");
+  }
+
+  const linhas = texto.split("\n");
+
+  const linhaTotal = linhas.find((linha) =>
+    linha.toLowerCase().includes("total")
+  );
+
+  if (linhaTotal) {
+    const matchTotal = linhaTotal.match(/(\d{1,3}(?:\.\d{3})*|\d+)(?:,\d{2}|\.\d{2})/);
+
+    if (matchTotal) {
+      return Number(
+        matchTotal[0]
+          .replace(/\./g, "")
+          .replace(",", ".")
+      );
+    }
+  }
+
+  const valores = texto.match(/(\d{1,3}(?:\.\d{3})*|\d+)(?:,\d{2}|\.\d{2})/g);
+
+  if (!valores || valores.length === 0) {
+    throw new Error("Não encontrei nenhum valor na mensagem.");
+  }
+
+  return valores.reduce((acc, valor) => {
+    const numero = Number(valor.replace(/\./g, "").replace(",", "."));
+    return acc + numero;
+  }, 0);
+}
+
+// PROCESSAR ITENS DA VENDA MANUAL
 async function processarItensVenda(connection, itens) {
   if (!itens || !Array.isArray(itens) || itens.length === 0) {
     throw new Error("A venda precisa ter pelo menos um item.");
@@ -61,7 +96,7 @@ async function processarItensVenda(connection, itens) {
   return { valorTotal, itensProcessados };
 }
 
-// CRIAR VENDA MANUAL
+// CRIAR VENDA MANUAL COM PRODUTOS
 async function criarVendaManual(req, res) {
   const connection = await pool.getConnection();
 
@@ -71,10 +106,7 @@ async function criarVendaManual(req, res) {
 
     await connection.beginTransaction();
 
-    const { valorTotal, itensProcessados } = await processarItensVenda(
-      connection,
-      itens
-    );
+    const { valorTotal, itensProcessados } = await processarItensVenda(connection, itens);
 
     const dataVendaFinal = data_venda || new Date().toISOString().slice(0, 10);
 
@@ -126,41 +158,32 @@ async function criarVendaManual(req, res) {
     await connection.rollback();
     connection.release();
 
-    console.error("Erro ao criar venda manual:", error.message);
-
     return res.status(400).json({
       message: error.message || "Erro ao criar venda manual.",
     });
   }
 }
 
-// CRIAR VENDA COM IA
+// CRIAR VENDA POR TEXTO / CATÁLOGO
 async function criarVendaIa(req, res) {
-  const connection = await pool.getConnection();
-
   try {
-    const { cliente_nome, data_venda, mensagem_original, itens } = req.body;
+    const { cliente_nome, data_venda, mensagem_original } = req.body;
     const usuarioLogado = req.usuario;
 
-    if (!mensagem_original || !mensagem_original.trim()) {
-      connection.release();
+    const textoOriginal = mensagem_original?.trim();
+
+    if (!textoOriginal) {
       return res.status(400).json({
-        message: "A mensagem original é obrigatória.",
+        message: "A mensagem do pedido é obrigatória.",
       });
     }
 
-    await connection.beginTransaction();
-
-    const { valorTotal, itensProcessados } = await processarItensVenda(
-      connection,
-      itens
-    );
-
+    const valorTotal = extrairValorTotalDoTexto(textoOriginal);
     const dataVendaFinal = data_venda || new Date().toISOString().slice(0, 10);
 
-    const [resultadoVenda] = await connection.query(
+    const [resultadoVenda] = await pool.query(
       `
-      INSERT INTO vendas 
+      INSERT INTO vendas
       (usuario_id, cliente_nome, data_venda, valor_total, origem, texto_original)
       VALUES (?, ?, ?, ?, ?, ?)
       `,
@@ -170,55 +193,28 @@ async function criarVendaIa(req, res) {
         dataVendaFinal,
         valorTotal,
         "ia",
-        mensagem_original.trim(),
+        textoOriginal,
       ]
     );
 
-    const vendaId = resultadoVenda.insertId;
-
-    for (const item of itensProcessados) {
-      await connection.query(
-        `
-        INSERT INTO itens_venda
-        (venda_id, produto_id, quantidade, preco_unitario, custo_unitario, subtotal, lucro)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-          vendaId,
-          item.produto_id,
-          item.quantidade,
-          item.preco_unitario,
-          item.custo_unitario,
-          item.subtotal,
-          item.lucro,
-        ]
-      );
-    }
-
-    await connection.commit();
-    connection.release();
-
     return res.status(201).json({
-      message: "Venda com IA criada com sucesso.",
+      message: "Venda registrada com sucesso.",
       venda: {
-        id: vendaId,
+        id: resultadoVenda.insertId,
         usuario_id: usuarioLogado.id,
         cliente_nome: cliente_nome || null,
         data_venda: dataVendaFinal,
         valor_total: valorTotal,
         origem: "ia",
-        texto_original: mensagem_original.trim(),
-        itens: itensProcessados,
+        texto_original: textoOriginal,
+        itens: [],
       },
     });
   } catch (error) {
-    await connection.rollback();
-    connection.release();
-
-    console.error("Erro ao criar venda com IA:", error.message);
+    console.error("Erro ao criar venda por texto:", error.message);
 
     return res.status(400).json({
-      message: error.message || "Erro ao criar venda com IA.",
+      message: error.message || "Erro ao registrar venda.",
     });
   }
 }
@@ -229,7 +225,7 @@ async function atualizarVenda(req, res) {
 
   try {
     const { id } = req.params;
-    const { cliente_nome, data_venda, itens } = req.body;
+    const { cliente_nome, data_venda, itens, mensagem_original, valor_total } = req.body;
     const usuarioLogado = req.usuario;
 
     await connection.beginTransaction();
@@ -262,47 +258,90 @@ async function atualizarVenda(req, res) {
       });
     }
 
-    const { valorTotal, itensProcessados } = await processarItensVenda(
-      connection,
-      itens
-    );
-
     const dataVendaFinal = data_venda || venda.data_venda;
 
-    await connection.query(
-      `
-      UPDATE vendas
-      SET
-        cliente_nome = ?,
-        data_venda = ?,
-        valor_total = ?,
-        editada = 1,
-        editada_em = NOW(),
-        editada_por = ?
-      WHERE id = ?
-      `,
-      [cliente_nome || null, dataVendaFinal, valorTotal, usuarioLogado.id, id]
-    );
+    if (itens && Array.isArray(itens) && itens.length > 0) {
+      const { valorTotal, itensProcessados } = await processarItensVenda(
+        connection,
+        itens
+      );
 
-    await connection.query(`DELETE FROM itens_venda WHERE venda_id = ?`, [id]);
-
-    for (const item of itensProcessados) {
       await connection.query(
         `
-        INSERT INTO itens_venda
-        (venda_id, produto_id, quantidade, preco_unitario, custo_unitario, subtotal, lucro)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        UPDATE vendas
+        SET
+          cliente_nome = ?,
+          data_venda = ?,
+          valor_total = ?,
+          editada = 1,
+          editada_em = NOW(),
+          editada_por = ?
+        WHERE id = ?
+        `,
+        [cliente_nome || null, dataVendaFinal, valorTotal, usuarioLogado.id, id]
+      );
+
+      await connection.query(`DELETE FROM itens_venda WHERE venda_id = ?`, [id]);
+
+      for (const item of itensProcessados) {
+        await connection.query(
+          `
+          INSERT INTO itens_venda
+          (venda_id, produto_id, quantidade, preco_unitario, custo_unitario, subtotal, lucro)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          `,
+          [
+            id,
+            item.produto_id,
+            item.quantidade,
+            item.preco_unitario,
+            item.custo_unitario,
+            item.subtotal,
+            item.lucro,
+          ]
+        );
+      }
+    } else {
+      const textoOriginal = mensagem_original?.trim() || venda.texto_original;
+
+      const valorTotalFinal =
+        valor_total !== undefined && valor_total !== null && valor_total !== ""
+          ? Number(valor_total)
+          : extrairValorTotalDoTexto(textoOriginal);
+
+      if (Number.isNaN(valorTotalFinal) || valorTotalFinal <= 0) {
+        await connection.rollback();
+        connection.release();
+
+        return res.status(400).json({
+          message: "Valor total inválido.",
+        });
+      }
+
+      await connection.query(
+        `
+        UPDATE vendas
+        SET
+          cliente_nome = ?,
+          data_venda = ?,
+          valor_total = ?,
+          texto_original = ?,
+          editada = 1,
+          editada_em = NOW(),
+          editada_por = ?
+        WHERE id = ?
         `,
         [
+          cliente_nome || null,
+          dataVendaFinal,
+          valorTotalFinal,
+          textoOriginal,
+          usuarioLogado.id,
           id,
-          item.produto_id,
-          item.quantidade,
-          item.preco_unitario,
-          item.custo_unitario,
-          item.subtotal,
-          item.lucro,
         ]
       );
+
+      await connection.query(`DELETE FROM itens_venda WHERE venda_id = ?`, [id]);
     }
 
     await connection.commit();
@@ -314,8 +353,6 @@ async function atualizarVenda(req, res) {
   } catch (error) {
     await connection.rollback();
     connection.release();
-
-    console.error("Erro ao atualizar venda:", error.message);
 
     return res.status(400).json({
       message: error.message || "Erro ao atualizar venda.",
@@ -412,7 +449,6 @@ async function listarVendas(req, res) {
 
     return res.status(200).json(Array.from(vendasMap.values()));
   } catch (error) {
-    console.error("Erro ao listar vendas:", error.message);
     return res.status(500).json({
       message: "Erro ao listar vendas.",
     });
@@ -479,7 +515,6 @@ async function buscarVendaPorId(req, res) {
       itens,
     });
   } catch (error) {
-    console.error("Erro ao buscar venda:", error.message);
     return res.status(500).json({
       message: "Erro ao buscar venda.",
     });
@@ -517,7 +552,6 @@ async function excluirVenda(req, res) {
       message: "Venda excluída com sucesso.",
     });
   } catch (error) {
-    console.error("Erro ao excluir venda:", error.message);
     return res.status(500).json({
       message: "Erro ao excluir venda.",
     });
