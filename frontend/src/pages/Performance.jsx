@@ -77,27 +77,52 @@ function Performance() {
     return "Período";
   }
 
+  const filtros = [
+    { value: "semana", label: "Semana" },
+    { value: "mes", label: "Mês" },
+    { value: "6meses", label: "6 meses" },
+    { value: "ano", label: "Ano" },
+  ];
+
   return (
     <div style={styles.page}>
-      <header style={styles.pageHeader(isMobile)}>
+      <header style={styles.header(isMobile)}>
         <div>
-          <p style={styles.pageMini}>Equipe</p>
+          <p style={styles.eyebrow}>Equipe</p>
 
-          <h1 style={styles.pageTitle(isMobile)}>
+          <h1 style={styles.title(isMobile)}>
             Desempenho dos funcionários
           </h1>
 
-          <p style={styles.pageSubtitle}>
-            Compare os resultados de vendas de cada funcionário por período.
+          <p style={styles.subtitle}>
+            Acompanhe as vendas individuais da equipe por período.
           </p>
         </div>
 
-        <div style={styles.periodBadge}>
+        <div style={styles.currentPeriod}>
           {obterNomePeriodo()}
         </div>
       </header>
 
-      {erro && <p style={styles.erro}>{erro}</p>}
+      <div style={styles.filtersWrap(isMobile)}>
+        {filtros.map((filtro) => (
+          <button
+            key={filtro.value}
+            type="button"
+            onClick={() => setPeriodo(filtro.value)}
+            style={{
+              ...styles.filterButton,
+              ...(periodo === filtro.value
+                ? styles.filterButtonActive
+                : {}),
+            }}
+          >
+            {filtro.label}
+          </button>
+        ))}
+      </div>
+
+      {erro && <div style={styles.errorBox}>{erro}</div>}
 
       <section
         style={styles.summaryGrid(
@@ -108,207 +133,148 @@ function Performance() {
             : "repeat(3, minmax(0, 1fr))"
         )}
       >
-        <div style={styles.summaryCard}>
-          <p style={styles.summaryMini}>Total vendido</p>
+        <div style={styles.summaryItem}>
+          <p style={styles.summaryLabel}>Total vendido</p>
 
-          <h3 style={styles.summaryValue}>
+          <h2 style={styles.summaryValue}>
             {formatarMoeda(resumo.totalVendido)}
-          </h3>
+          </h2>
 
-          <p style={styles.summaryText}>
-            valor total registrado pela equipe no período.
+          <p style={styles.summaryHint}>
+            valor acumulado no período
           </p>
         </div>
 
-        <div style={styles.summaryCard}>
-          <p style={styles.summaryMini}>Quantidade de vendas</p>
+        <div style={styles.summaryItem}>
+          <p style={styles.summaryLabel}>Quantidade de vendas</p>
 
-          <h3 style={styles.summaryValue}>
+          <h2 style={styles.summaryValue}>
             {resumo.totalVendas}
-          </h3>
+          </h2>
 
-          <p style={styles.summaryText}>
-            vendas registradas por todos os funcionários.
+          <p style={styles.summaryHint}>
+            vendas registradas pela equipe
           </p>
         </div>
 
-        <div style={styles.summaryCardDark}>
-          <p style={styles.summaryMiniDark}>
-            Melhor desempenho
-          </p>
+        <div style={styles.summaryItem}>
+          <p style={styles.summaryLabel}>Maior resultado</p>
 
-          <h3 style={styles.bestEmployeeName}>
+          <h2 style={styles.summaryName}>
             {resumo.melhorFuncionario?.usuario_nome || "Sem vendas"}
-          </h3>
+          </h2>
 
-          <p style={styles.bestEmployeeValue}>
+          <p style={styles.summaryHighlight}>
             {resumo.melhorFuncionario
-              ? formatarMoeda(
-                  resumo.melhorFuncionario.total_vendido
-                )
+              ? formatarMoeda(resumo.melhorFuncionario.total_vendido)
               : formatarMoeda(0)}
           </p>
         </div>
       </section>
 
-      <section style={styles.tableCard}>
-        <div style={styles.tableHeader(isMobile)}>
+      <section style={styles.tableSection}>
+        <div style={styles.tableHeader}>
           <div>
-            <p style={styles.tableMini}>Comparativo</p>
+            <p style={styles.tableEyebrow}>Comparativo</p>
+
             <h2 style={styles.tableTitle}>
               Vendas por funcionário
             </h2>
           </div>
-
-          <div style={styles.filters(isMobile)}>
-            <button
-              type="button"
-              onClick={() => setPeriodo("semana")}
-              style={{
-                ...styles.filterButton,
-                ...(periodo === "semana"
-                  ? styles.filterButtonActive
-                  : {}),
-              }}
-            >
-              Semana
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPeriodo("mes")}
-              style={{
-                ...styles.filterButton,
-                ...(periodo === "mes"
-                  ? styles.filterButtonActive
-                  : {}),
-              }}
-            >
-              Mês
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPeriodo("6meses")}
-              style={{
-                ...styles.filterButton,
-                ...(periodo === "6meses"
-                  ? styles.filterButtonActive
-                  : {}),
-              }}
-            >
-              6 meses
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPeriodo("ano")}
-              style={{
-                ...styles.filterButton,
-                ...(periodo === "ano"
-                  ? styles.filterButtonActive
-                  : {}),
-              }}
-            >
-              Ano
-            </button>
-          </div>
         </div>
 
-        <div style={styles.tableViewport}>
-          {loading ? (
-            <div style={styles.emptyBox}>
-              <p style={styles.emptyTitle}>
-                Carregando desempenho...
-              </p>
-            </div>
-          ) : dados.length === 0 ? (
-            <div style={styles.emptyBox}>
-              <p style={styles.emptyTitle}>
-                Nenhum funcionário encontrado
-              </p>
+        {loading ? (
+          <div style={styles.emptyState}>
+            <p style={styles.emptyTitle}>
+              Carregando desempenho...
+            </p>
+          </div>
+        ) : dados.length === 0 ? (
+          <div style={styles.emptyState}>
+            <p style={styles.emptyTitle}>
+              Nenhum dado encontrado
+            </p>
 
-              <p style={styles.emptyText}>
-                Ainda não há dados disponíveis para o período.
-              </p>
-            </div>
-          ) : isMobile ? (
-            <div style={styles.mobileList}>
-              {dados.map((item) => {
-                const fotoUrl = getImageUrl(item.foto_perfil);
+            <p style={styles.emptyText}>
+              Ainda não existem vendas registradas neste período.
+            </p>
+          </div>
+        ) : isMobile ? (
+          <div style={styles.mobileList}>
+            {dados.map((item) => {
+              const fotoUrl = getImageUrl(item.foto_perfil);
 
-                return (
-                  <div
-                    key={item.usuario_id}
-                    style={styles.mobileCard}
-                  >
-                    <div style={styles.mobileCardTop}>
-                      <div style={styles.employeeIdentity}>
-                        <span style={styles.positionBadge}>
-                          {item.posicao}
-                        </span>
+              return (
+                <div
+                  key={item.usuario_id}
+                  style={styles.mobileRow}
+                >
+                  <div style={styles.mobileTop}>
+                    <div style={styles.employee}>
+                      <span style={styles.position}>
+                        {item.posicao}
+                      </span>
 
-                        {fotoUrl ? (
-                          <img
-                            src={fotoUrl}
-                            alt={item.usuario_nome}
-                            style={styles.avatar}
-                          />
-                        ) : (
-                          <div style={styles.avatarPlaceholder}>
-                            {item.usuario_nome
-                              ?.charAt(0)
-                              ?.toUpperCase() || "U"}
-                          </div>
-                        )}
-
-                        <div>
-                          <p style={styles.employeeName}>
-                            {item.usuario_nome}
-                          </p>
-
-                          <p style={styles.employeeEmail}>
-                            {item.usuario_email}
-                          </p>
+                      {fotoUrl ? (
+                        <img
+                          src={fotoUrl}
+                          alt={item.usuario_nome}
+                          style={styles.avatar}
+                        />
+                      ) : (
+                        <div style={styles.avatarPlaceholder}>
+                          {item.usuario_nome
+                            ?.charAt(0)
+                            ?.toUpperCase() || "U"}
                         </div>
-                      </div>
-                    </div>
+                      )}
 
-                    <div style={styles.mobileStats}>
-                      <div style={styles.mobileStat}>
-                        <span style={styles.statLabel}>
-                          Vendas
-                        </span>
+                      <div style={styles.employeeText}>
+                        <p style={styles.employeeName}>
+                          {item.usuario_nome}
+                        </p>
 
-                        <strong style={styles.statValue}>
-                          {item.quantidade_vendas}
-                        </strong>
-                      </div>
-
-                      <div style={styles.mobileStat}>
-                        <span style={styles.statLabel}>
-                          Total vendido
-                        </span>
-
-                        <strong style={styles.statValue}>
-                          {formatarMoeda(item.total_vendido)}
-                        </strong>
+                        <p style={styles.employeeEmail}>
+                          {item.usuario_email}
+                        </p>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
+
+                  <div style={styles.mobileMetrics}>
+                    <div>
+                      <span style={styles.metricLabel}>
+                        Vendas
+                      </span>
+
+                      <strong style={styles.metricValue}>
+                        {item.quantidade_vendas}
+                      </strong>
+                    </div>
+
+                    <div style={styles.mobileTotal}>
+                      <span style={styles.metricLabel}>
+                        Total vendido
+                      </span>
+
+                      <strong style={styles.metricValue}>
+                        {formatarMoeda(item.total_vendido)}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={styles.tableWrap}>
             <table style={styles.table}>
               <thead>
                 <tr>
                   <th style={styles.thPosition}>#</th>
                   <th style={styles.th}>Funcionário</th>
                   <th style={styles.th}>Vendas</th>
-                  <th style={styles.thRight}>
-                    Total vendido
-                  </th>
+                  <th style={styles.thRight}>Total vendido</th>
                 </tr>
               </thead>
 
@@ -322,13 +288,13 @@ function Performance() {
                       style={styles.tableRow}
                     >
                       <td style={styles.tdPosition}>
-                        <span style={styles.positionBadge}>
+                        <span style={styles.position}>
                           {item.posicao}
                         </span>
                       </td>
 
                       <td style={styles.td}>
-                        <div style={styles.employeeIdentity}>
+                        <div style={styles.employee}>
                           {fotoUrl ? (
                             <img
                               src={fotoUrl}
@@ -356,7 +322,7 @@ function Performance() {
                       </td>
 
                       <td style={styles.td}>
-                        <strong style={styles.salesCount}>
+                        <strong style={styles.salesValue}>
                           {item.quantidade_vendas}
                         </strong>
                       </td>
@@ -371,8 +337,8 @@ function Performance() {
                 })}
               </tbody>
             </table>
-          )}
-        </div>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -384,10 +350,10 @@ const styles = {
     minHeight: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "24px",
   },
 
-  pageHeader: (isMobile) => ({
+  header: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: isMobile ? "flex-start" : "center",
@@ -395,170 +361,155 @@ const styles = {
     gap: "16px",
   }),
 
-  pageMini: {
+  eyebrow: {
     fontSize: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#7b7b7b",
     fontWeight: 700,
-    marginBottom: "6px",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: "#9a948d",
+    marginBottom: "7px",
   },
 
-  pageTitle: (isMobile) => ({
+  title: (isMobile) => ({
     fontSize: isMobile ? "28px" : "34px",
-    fontWeight: 900,
-    letterSpacing: "-0.05em",
-    color: "#111",
+    fontWeight: 800,
+    letterSpacing: "-0.04em",
+    color: "#1a1918",
   }),
 
-  pageSubtitle: {
-    color: "#666",
-    fontSize: "15px",
-    marginTop: "6px",
+  subtitle: {
+    marginTop: "7px",
+    fontSize: "14px",
+    color: "#77716b",
     lineHeight: 1.6,
   },
 
-  periodBadge: {
-    padding: "11px 16px",
-    borderRadius: "999px",
-    background: "rgba(31,79,163,0.10)",
-    color: "#1f4fa3",
+  currentPeriod: {
     fontSize: "13px",
-    fontWeight: 800,
+    fontWeight: 700,
+    color: "#6b655f",
+    background: "#f7f4f0",
+    border: "1px solid #e9e4dd",
+    borderRadius: "999px",
+    padding: "10px 14px",
+    whiteSpace: "nowrap",
   },
 
-  erro: {
-    color: "#b00020",
+  filtersWrap: (isMobile) => ({
+    display: "flex",
+    gap: "6px",
+    flexWrap: "wrap",
+    width: isMobile ? "100%" : "fit-content",
+    padding: "4px",
+    background: "#f3efea",
+    borderRadius: "12px",
+  }),
+
+  filterButton: {
+    height: "38px",
+    padding: "0 15px",
+    border: "none",
+    borderRadius: "9px",
+    background: "transparent",
+    color: "#77716b",
+    fontSize: "13px",
     fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  filterButtonActive: {
+    background: "#fff",
+    color: "#1a1918",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+  },
+
+  errorBox: {
+    background: "#fff7f7",
+    border: "1px solid #f1d9da",
+    borderRadius: "12px",
+    padding: "12px 14px",
+    color: "#a7272e",
+    fontSize: "14px",
+    fontWeight: 600,
   },
 
   summaryGrid: (columns) => ({
     display: "grid",
     gridTemplateColumns: columns,
-    gap: "16px",
+    gap: "14px",
+    borderTop: "1px solid #e9e4dd",
+    borderBottom: "1px solid #e9e4dd",
+    padding: "22px 0",
   }),
 
-  summaryCard: {
-    background: "#fff",
-    borderRadius: "22px",
-    padding: "20px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+  summaryItem: {
+    minWidth: 0,
+    padding: "4px 16px",
   },
 
-  summaryCardDark: {
-    background: "#171921",
-    color: "#fff",
-    borderRadius: "22px",
-    padding: "20px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.10)",
-  },
-
-  summaryMini: {
-    fontSize: "11px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#777",
-    fontWeight: 700,
-    marginBottom: "10px",
-  },
-
-  summaryMiniDark: {
-    fontSize: "11px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "rgba(255,255,255,0.55)",
+  summaryLabel: {
+    fontSize: "12px",
+    color: "#918b84",
     fontWeight: 700,
     marginBottom: "10px",
   },
 
   summaryValue: {
-    fontSize: "30px",
-    fontWeight: 900,
-    letterSpacing: "-0.05em",
-    color: "#111",
-    marginBottom: "8px",
-  },
-
-  summaryText: {
-    color: "#666",
-    fontSize: "13px",
-    lineHeight: 1.5,
-  },
-
-  bestEmployeeName: {
-    fontSize: "24px",
-    fontWeight: 900,
-    color: "#fff",
-    letterSpacing: "-0.04em",
-    marginBottom: "6px",
-  },
-
-  bestEmployeeValue: {
-    color: "#f1cb3a",
-    fontSize: "18px",
+    fontSize: "28px",
     fontWeight: 800,
-  },
-
-  tableCard: {
-    background: "#fff",
-    borderRadius: "24px",
-    padding: "22px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "18px",
-  },
-
-  tableHeader: (isMobile) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "stretch" : "center",
-    flexDirection: isMobile ? "column" : "row",
-    gap: "16px",
-  }),
-
-  tableMini: {
-    fontSize: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#7b7b7b",
-    fontWeight: 700,
+    letterSpacing: "-0.04em",
+    color: "#1a1918",
     marginBottom: "6px",
+  },
+
+  summaryName: {
+    fontSize: "22px",
+    fontWeight: 800,
+    letterSpacing: "-0.03em",
+    color: "#1a1918",
+    marginBottom: "6px",
+  },
+
+  summaryHint: {
+    fontSize: "12px",
+    color: "#aaa39c",
+  },
+
+  summaryHighlight: {
+    fontSize: "13px",
+    color: "#a71f27",
+    fontWeight: 700,
+  },
+
+  tableSection: {
+    background: "#fff",
+    border: "1px solid #e9e4dd",
+    borderRadius: "16px",
+    overflow: "hidden",
+  },
+
+  tableHeader: {
+    padding: "20px 22px 16px",
+    borderBottom: "1px solid #eee9e3",
+  },
+
+  tableEyebrow: {
+    fontSize: "11px",
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: "#aaa39c",
+    marginBottom: "5px",
   },
 
   tableTitle: {
-    fontSize: "22px",
+    fontSize: "19px",
     fontWeight: 800,
-    letterSpacing: "-0.04em",
-    color: "#111",
+    letterSpacing: "-0.03em",
+    color: "#1a1918",
   },
 
-  filters: (isMobile) => ({
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-    width: isMobile ? "100%" : "auto",
-  }),
-
-  filterButton: {
-    minHeight: "40px",
-    padding: "0 14px",
-    borderRadius: "999px",
-    border: "1px solid #ddd",
-    background: "#fff",
-    color: "#555",
-    fontSize: "12px",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  filterButtonActive: {
-    background: "#111",
-    color: "#fff",
-    borderColor: "#111",
-  },
-
-  tableViewport: {
+  tableWrap: {
     width: "100%",
     overflowX: "auto",
   },
@@ -566,194 +517,181 @@ const styles = {
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: "700px",
+    minWidth: "680px",
   },
 
   thPosition: {
     width: "70px",
-    padding: "13px",
+    padding: "13px 18px",
     textAlign: "left",
-    color: "#888",
     fontSize: "11px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    borderBottom: "1px solid #eee8df",
+    fontWeight: 700,
+    color: "#aaa39c",
+    borderBottom: "1px solid #eee9e3",
   },
 
   th: {
-    padding: "13px",
+    padding: "13px 18px",
     textAlign: "left",
-    color: "#888",
     fontSize: "11px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    borderBottom: "1px solid #eee8df",
+    fontWeight: 700,
+    color: "#aaa39c",
+    borderBottom: "1px solid #eee9e3",
   },
 
   thRight: {
-    padding: "13px",
+    padding: "13px 18px",
     textAlign: "right",
-    color: "#888",
     fontSize: "11px",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    borderBottom: "1px solid #eee8df",
+    fontWeight: 700,
+    color: "#aaa39c",
+    borderBottom: "1px solid #eee9e3",
   },
 
   tableRow: {
-    borderBottom: "1px solid #f0ece5",
+    borderBottom: "1px solid #f1ede8",
   },
 
   tdPosition: {
-    padding: "15px 13px",
+    padding: "14px 18px",
   },
 
   td: {
-    padding: "15px 13px",
+    padding: "14px 18px",
   },
 
   tdRight: {
-    padding: "15px 13px",
+    padding: "14px 18px",
     textAlign: "right",
   },
 
-  positionBadge: {
-    width: "30px",
-    height: "30px",
-    borderRadius: "10px",
-    background: "#f5f2ec",
-    color: "#111",
+  position: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "8px",
+    background: "#f5f2ee",
     display: "inline-flex",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
+    color: "#77716b",
     fontSize: "12px",
-    fontWeight: 900,
+    fontWeight: 800,
   },
 
-  employeeIdentity: {
+  employee: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    minWidth: 0,
-  },
-
-  employeeText: {
+    gap: "11px",
     minWidth: 0,
   },
 
   avatar: {
-    width: "42px",
-    height: "42px",
+    width: "40px",
+    height: "40px",
     borderRadius: "50%",
     objectFit: "cover",
     flexShrink: 0,
   },
 
   avatarPlaceholder: {
-    width: "42px",
-    height: "42px",
+    width: "40px",
+    height: "40px",
     borderRadius: "50%",
-    background: "#171921",
-    color: "#fff",
+    background: "#eee9e3",
+    color: "#5f5953",
     display: "flex",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
     fontSize: "13px",
     fontWeight: 800,
     flexShrink: 0,
   },
 
+  employeeText: {
+    minWidth: 0,
+  },
+
   employeeName: {
     fontSize: "14px",
-    fontWeight: 800,
-    color: "#111",
+    fontWeight: 700,
+    color: "#1a1918",
     marginBottom: "3px",
   },
 
   employeeEmail: {
-    color: "#888",
     fontSize: "12px",
+    color: "#9b958e",
+    whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
 
-  salesCount: {
-    color: "#111",
-    fontSize: "15px",
-    fontWeight: 800,
+  salesValue: {
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#514c47",
   },
 
   totalValue: {
-    color: "#111",
-    fontSize: "15px",
-    fontWeight: 900,
+    fontSize: "14px",
+    fontWeight: 800,
+    color: "#1a1918",
     whiteSpace: "nowrap",
   },
 
   mobileList: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
   },
 
-  mobileCard: {
-    background: "#f8f6f2",
-    border: "1px solid #eee8df",
-    borderRadius: "18px",
-    padding: "15px",
+  mobileRow: {
+    padding: "16px",
+    borderBottom: "1px solid #eee9e3",
   },
 
-  mobileCardTop: {
+  mobileTop: {
     marginBottom: "14px",
   },
 
-  mobileStats: {
+  mobileMetrics: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "10px",
+    gap: "12px",
+    paddingLeft: "39px",
   },
 
-  mobileStat: {
-    background: "#fff",
-    borderRadius: "14px",
-    padding: "12px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "5px",
+  mobileTotal: {
+    textAlign: "right",
   },
 
-  statLabel: {
-    fontSize: "10px",
-    color: "#888",
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    fontWeight: 700,
+  metricLabel: {
+    display: "block",
+    fontSize: "11px",
+    color: "#aaa39c",
+    marginBottom: "4px",
   },
 
-  statValue: {
+  metricValue: {
     fontSize: "14px",
-    fontWeight: 900,
-    color: "#111",
+    color: "#1a1918",
+    fontWeight: 800,
   },
 
-  emptyBox: {
-    borderRadius: "20px",
-    background: "#f8f6f2",
-    padding: "32px",
+  emptyState: {
+    padding: "42px 20px",
     textAlign: "center",
   },
 
   emptyTitle: {
-    fontSize: "20px",
-    fontWeight: 800,
-    color: "#111",
-    marginBottom: "7px",
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#514c47",
+    marginBottom: "6px",
   },
 
   emptyText: {
-    color: "#666",
-    fontSize: "14px",
+    fontSize: "13px",
+    color: "#9b958e",
   },
 };
 
