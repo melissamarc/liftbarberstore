@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import api from "../services/api";
 
-import "./NewAISale.css";
+import "../pages/StyleNewAISale.css";
 
 function NewAISale() {
   const [clienteNome, setClienteNome] = useState("");
