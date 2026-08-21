@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api, { getImageUrl } from "../services/api";
-import { useResponsive } from "../hooks/useResponsive";
+
+import "./Products.css";
 
 function Products() {
   const [produtos, setProdutos] = useState([]);
@@ -19,8 +20,6 @@ function Products() {
   const [editAtivo, setEditAtivo] = useState(true);
   const [editFoto, setEditFoto] = useState(null);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
-
-  const { isMobile, isTablet } = useResponsive();
 
   useEffect(() => {
     carregarProdutos();
@@ -139,327 +138,440 @@ function Products() {
   }
 
   return (
-    <div style={styles.page}>
-      <header style={styles.pageHeader}>
-        <div>
-          <p style={styles.pageMini}>Catálogo</p>
+    <div className="products-page">
 
-          <h1 style={styles.pageTitle(isMobile)}>
+      <header className="products-header">
+        <div>
+          <p className="products-eyebrow">
+            Catálogo
+          </p>
+
+          <h1 className="products-title">
             Produtos
           </h1>
 
-          <p style={styles.pageSubtitle}>
+          <p className="products-subtitle">
             Cadastre, pesquise e gerencie os produtos da loja.
           </p>
         </div>
+
+        <div className="products-count">
+          <strong>{produtos.length}</strong>
+
+          <span>
+            {produtos.length === 1
+              ? "produto"
+              : "produtos"}
+          </span>
+        </div>
       </header>
 
-      {erro && <p style={styles.erro}>{erro}</p>}
-
-      <section
-        style={styles.board(
-          isMobile
-            ? "1fr"
-            : isTablet
-            ? "1fr"
-            : "330px minmax(0, 1fr)"
-        )}
-      >
-        <aside style={styles.sidebar}>
-          <div style={styles.sidebarCard}>
-            <p style={styles.smallLabel}>Resumo</p>
-
-            <h2 style={styles.bigNumber}>
-              {produtos.length}
-            </h2>
-
-            <p style={styles.smallText}>
-              produtos exibidos
-            </p>
-          </div>
-
-          <div style={styles.sidebarCard}>
-            <h3 style={styles.cardTitle}>
-              Cadastrar produto
-            </h3>
-
-            <form
-              onSubmit={handleCadastrar}
-              style={styles.form}
-            >
-              <div style={styles.field}>
-                <label style={styles.label}>
-                  Nome do produto
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="Ex.: Pomada Modeladora"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  style={styles.input}
-                  required
-                />
-              </div>
-
-              <div style={styles.field}>
-                <label style={styles.label}>
-                  Preço de venda
-                </label>
-
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Ex.: 39,90"
-                  value={preco}
-                  onChange={(e) => setPreco(e.target.value)}
-                  style={styles.input}
-                  required
-                />
-              </div>
-
-              <div style={styles.field}>
-                <label style={styles.label}>
-                  Foto do produto
-                </label>
-
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={(e) =>
-                    setFotoProduto(e.target.files?.[0] || null)
-                  }
-                  style={styles.fileInput}
-                />
-              </div>
-
-              <button
-                type="submit"
-                style={{
-                  ...styles.primaryButton,
-                  ...(salvando
-                    ? styles.buttonDisabled
-                    : {}),
-                }}
-                disabled={salvando}
-              >
-                {salvando
-                  ? "Salvando..."
-                  : "Cadastrar produto"}
-              </button>
-            </form>
-          </div>
-        </aside>
-
-        <div style={styles.content}>
-          <form
-            onSubmit={handleBuscar}
-            style={styles.searchBar(isMobile)}
-          >
-            <input
-              type="text"
-              placeholder="Buscar produto pelo nome..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              style={styles.searchInput}
-            />
-
-            <button
-              type="submit"
-              style={styles.searchButton}
-            >
-              Buscar
-            </button>
-          </form>
-
-          <div style={styles.listHeader}>
-            <div>
-              <p style={styles.listMini}>
-                Produtos cadastrados
-              </p>
-
-              <h2 style={styles.listTitle}>
-                Lista de produtos
-              </h2>
-            </div>
-
-            {busca && (
-              <button
-                type="button"
-                style={styles.clearButton}
-                onClick={() => {
-                  setBusca("");
-                  carregarProdutos("");
-                }}
-              >
-                Limpar busca
-              </button>
-            )}
-          </div>
-
-          <div style={styles.listArea}>
-            {loading ? (
-              <p style={styles.feedbackText}>
-                Carregando produtos...
-              </p>
-            ) : produtos.length === 0 ? (
-              <div style={styles.emptyBox}>
-                <p style={styles.emptyTitle}>
-                  Nenhum produto encontrado
-                </p>
-
-                <p style={styles.emptyText}>
-                  Tente outra busca ou cadastre um novo
-                  produto.
-                </p>
-              </div>
-            ) : (
-              produtos.map((produto) => (
-                <div
-                  key={produto.id}
-                  style={styles.row(isMobile)}
-                >
-                  <div style={styles.leftInfo}>
-                    {produto.foto_produto ? (
-                      <img
-                        src={getImageUrl(
-                          produto.foto_produto
-                        )}
-                        alt={produto.nome}
-                        style={styles.thumb}
-                      />
-                    ) : (
-                      <div style={styles.thumbEmpty}>
-                        IMG
-                      </div>
-                    )}
-
-                    <div style={styles.productInfo}>
-                      <p style={styles.productName}>
-                        {produto.nome}
-                      </p>
-
-                      <span
-                        style={{
-                          ...styles.statusBadge,
-                          ...(produto.ativo
-                            ? styles.statusActive
-                            : styles.statusInactive),
-                        }}
-                      >
-                        {produto.ativo
-                          ? "Ativo"
-                          : "Inativo"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={styles.priceArea}>
-                    <span style={styles.valueLabel}>
-                      Preço
-                    </span>
-
-                    <strong style={styles.priceValue}>
-                      {formatarMoeda(produto.preco)}
-                    </strong>
-                  </div>
-
-                  <button
-                    type="button"
-                    style={styles.editButton(isMobile)}
-                    onClick={() =>
-                      abrirEdicao(produto)
-                    }
-                  >
-                    Editar
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+      {erro && (
+        <div className="products-error">
+          {erro}
         </div>
-      </section>
+      )}
 
-      {produtoEditando && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
+      <section className="products-layout">
+
+        {/* CADASTRO */}
+
+        <aside className="products-create">
+          <div className="products-create-header">
             <div>
-              <p style={styles.modalMini}>
-                Produto
+              <p className="products-section-eyebrow">
+                Novo produto
               </p>
 
-              <h2 style={styles.modalTitle}>
-                Editar produto
+              <h2>
+                Cadastrar produto
               </h2>
             </div>
 
-            <div style={styles.field}>
-              <label style={styles.label}>
+            <span className="products-create-icon">
+              +
+            </span>
+          </div>
+
+          <form
+            onSubmit={handleCadastrar}
+            className="products-form"
+          >
+            <div className="products-field">
+              <label>
                 Nome do produto
               </label>
 
               <input
                 type="text"
-                value={editNome}
+                placeholder="Ex.: Pomada Modeladora"
+                value={nome}
                 onChange={(e) =>
-                  setEditNome(e.target.value)
+                  setNome(e.target.value)
                 }
-                style={styles.input}
+                required
               />
             </div>
 
-            <div style={styles.field}>
-              <label style={styles.label}>
+            <div className="products-field">
+              <label>
                 Preço de venda
               </label>
 
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={editPreco}
-                onChange={(e) =>
-                  setEditPreco(e.target.value)
-                }
-                style={styles.input}
-              />
+              <div className="products-price-input">
+                <span>R$</span>
+
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="39,90"
+                  value={preco}
+                  onChange={(e) =>
+                    setPreco(e.target.value)
+                  }
+                  required
+                />
+              </div>
             </div>
 
-            <label style={styles.checkbox}>
-              <input
-                type="checkbox"
-                checked={editAtivo}
-                onChange={(e) =>
-                  setEditAtivo(e.target.checked)
-                }
-              />
-
-              Produto ativo
-            </label>
-
-            <div style={styles.field}>
-              <label style={styles.label}>
-                Trocar foto
+            <div className="products-field">
+              <label>
+                Foto do produto
               </label>
 
+              <label className="products-file">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={(e) =>
+                    setFotoProduto(
+                      e.target.files?.[0] || null
+                    )
+                  }
+                />
+
+                <span className="products-file-button">
+                  Escolher imagem
+                </span>
+
+                <span className="products-file-name">
+                  {fotoProduto
+                    ? fotoProduto.name
+                    : "Nenhum arquivo selecionado"}
+                </span>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className="products-primary-button"
+              disabled={salvando}
+            >
+              {salvando
+                ? "Salvando..."
+                : "Cadastrar produto"}
+            </button>
+          </form>
+        </aside>
+
+        {/* PRODUTOS */}
+
+        <main className="products-content">
+
+          <div className="products-content-header">
+            <div>
+              <p className="products-section-eyebrow">
+                Produtos cadastrados
+              </p>
+
+              <h2>
+                Lista de produtos
+              </h2>
+            </div>
+
+            <span className="products-result-count">
+              {produtos.length} exibidos
+            </span>
+          </div>
+
+          <form
+            onSubmit={handleBuscar}
+            className="products-search"
+          >
+            <div className="products-search-field">
+              <span>⌕</span>
+
               <input
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
+                type="text"
+                placeholder="Buscar produto pelo nome..."
+                value={busca}
                 onChange={(e) =>
-                  setEditFoto(
-                    e.target.files?.[0] || null
-                  )
+                  setBusca(e.target.value)
                 }
-                style={styles.fileInput}
               />
             </div>
 
-            <div style={styles.modalButtons}>
+            <button
+              type="submit"
+              className="products-search-button"
+            >
+              Buscar
+            </button>
+
+            {busca && (
+              <button
+                type="button"
+                className="products-clear-button"
+                onClick={() => {
+                  setBusca("");
+                  carregarProdutos("");
+                }}
+              >
+                Limpar
+              </button>
+            )}
+          </form>
+
+          <div className="products-list">
+
+            {loading ? (
+              <div className="products-feedback">
+                Carregando produtos...
+              </div>
+            ) : produtos.length === 0 ? (
+              <div className="products-empty">
+                <strong>
+                  Nenhum produto encontrado
+                </strong>
+
+                <p>
+                  Tente outra busca ou cadastre um novo produto.
+                </p>
+              </div>
+            ) : (
+              produtos.map((produto) => {
+                const fotoUrl = produto.foto_produto
+                  ? getImageUrl(produto.foto_produto)
+                  : null;
+
+                return (
+                  <article
+                    key={produto.id}
+                    className="products-row"
+                  >
+                    <div className="products-product">
+
+                      {fotoUrl ? (
+                        <img
+                          src={fotoUrl}
+                          alt={produto.nome}
+                          className="products-thumb"
+                        />
+                      ) : (
+                        <div className="products-thumb-empty">
+                          IMG
+                        </div>
+                      )}
+
+                      <div className="products-info">
+                        <p className="products-name">
+                          {produto.nome}
+                        </p>
+
+                        <span
+                          className={
+                            produto.ativo
+                              ? "products-status active"
+                              : "products-status inactive"
+                          }
+                        >
+                          <span />
+
+                          {produto.ativo
+                            ? "Ativo"
+                            : "Inativo"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="products-price">
+                      <span>
+                        Preço
+                      </span>
+
+                      <strong>
+                        {formatarMoeda(produto.preco)}
+                      </strong>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="products-edit-button"
+                      onClick={() =>
+                        abrirEdicao(produto)
+                      }
+                    >
+                      Editar
+                    </button>
+                  </article>
+                );
+              })
+            )}
+          </div>
+        </main>
+      </section>
+
+      {/* MODAL */}
+
+      {produtoEditando && (
+        <div className="products-modal-overlay">
+
+          <div className="products-modal">
+
+            <div className="products-modal-header">
+              <div>
+                <p className="products-section-eyebrow">
+                  Produto
+                </p>
+
+                <h2>
+                  Editar produto
+                </h2>
+              </div>
+
               <button
                 type="button"
                 onClick={fecharEdicao}
-                style={styles.cancelButton}
+                className="products-modal-close"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="products-modal-product">
+
+              {produtoEditando.foto_produto ? (
+                <img
+                  src={getImageUrl(
+                    produtoEditando.foto_produto
+                  )}
+                  alt={produtoEditando.nome}
+                />
+              ) : (
+                <div className="products-modal-image-empty">
+                  IMG
+                </div>
+              )}
+
+              <div>
+                <span>
+                  Editando
+                </span>
+
+                <strong>
+                  {produtoEditando.nome}
+                </strong>
+              </div>
+            </div>
+
+            <div className="products-modal-fields">
+
+              <div className="products-field">
+                <label>
+                  Nome do produto
+                </label>
+
+                <input
+                  type="text"
+                  value={editNome}
+                  onChange={(e) =>
+                    setEditNome(e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="products-field">
+                <label>
+                  Preço de venda
+                </label>
+
+                <div className="products-price-input">
+                  <span>R$</span>
+
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={editPreco}
+                    onChange={(e) =>
+                      setEditPreco(e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
+              <label className="products-switch-row">
+
+                <div>
+                  <strong>
+                    Produto ativo
+                  </strong>
+
+                  <span>
+                    Produtos inativos continuam cadastrados.
+                  </span>
+                </div>
+
+                <div className="products-switch">
+                  <input
+                    type="checkbox"
+                    checked={editAtivo}
+                    onChange={(e) =>
+                      setEditAtivo(
+                        e.target.checked
+                      )
+                    }
+                  />
+
+                  <span className="products-switch-slider" />
+                </div>
+              </label>
+
+              <div className="products-field">
+                <label>
+                  Trocar foto
+                </label>
+
+                <label className="products-file">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={(e) =>
+                      setEditFoto(
+                        e.target.files?.[0] || null
+                      )
+                    }
+                  />
+
+                  <span className="products-file-button">
+                    Escolher imagem
+                  </span>
+
+                  <span className="products-file-name">
+                    {editFoto
+                      ? editFoto.name
+                      : "Manter imagem atual"}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="products-modal-actions">
+              <button
+                type="button"
+                onClick={fecharEdicao}
+                className="products-secondary-button"
               >
                 Cancelar
               </button>
@@ -467,13 +579,7 @@ function Products() {
               <button
                 type="button"
                 onClick={salvarEdicao}
-                style={{
-                  ...styles.primaryButton,
-                  flex: 1,
-                  ...(salvandoEdicao
-                    ? styles.buttonDisabled
-                    : {}),
-                }}
+                className="products-primary-button"
                 disabled={salvandoEdicao}
               >
                 {salvandoEdicao
@@ -487,443 +593,5 @@ function Products() {
     </div>
   );
 }
-
-const styles = {
-  page: {
-    width: "100%",
-    minHeight: "100%",
-    display: "flex",
-    flexDirection: "column",
-    gap: 20,
-  },
-
-  pageHeader: {},
-
-  pageMini: {
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#888",
-    fontWeight: 700,
-    marginBottom: 6,
-  },
-
-  pageTitle: (isMobile) => ({
-    fontSize: isMobile ? 28 : 32,
-    fontWeight: 900,
-    color: "#111",
-    letterSpacing: "-0.04em",
-  }),
-
-  pageSubtitle: {
-    color: "#666",
-    fontSize: 15,
-    lineHeight: 1.6,
-    marginTop: 4,
-  },
-
-  erro: {
-    color: "#b00020",
-    fontWeight: 700,
-  },
-
-  board: (cols) => ({
-    display: "grid",
-    gridTemplateColumns: cols,
-    gap: 20,
-    alignItems: "start",
-    minWidth: 0,
-  }),
-
-  sidebar: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 20,
-    minWidth: 0,
-  },
-
-  sidebarCard: {
-    background: "#fff",
-    padding: 22,
-    borderRadius: 22,
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-    minWidth: 0,
-  },
-
-  smallLabel: {
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#888",
-    fontWeight: 800,
-  },
-
-  bigNumber: {
-    fontSize: 42,
-    lineHeight: 1,
-    fontWeight: 900,
-    color: "#111",
-    marginTop: 8,
-  },
-
-  smallText: {
-    color: "#666",
-    fontSize: 14,
-    marginTop: 6,
-  },
-
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 800,
-    color: "#111",
-  },
-
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 14,
-    marginTop: 16,
-  },
-
-  field: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 7,
-  },
-
-  label: {
-    color: "#555",
-    fontSize: 12,
-    fontWeight: 800,
-  },
-
-  input: {
-    width: "100%",
-    height: 48,
-    borderRadius: 12,
-    border: "1px solid #ddd",
-    padding: "0 14px",
-    outline: "none",
-    background: "#fff",
-    color: "#111",
-    fontSize: 14,
-    boxSizing: "border-box",
-  },
-
-  fileInput: {
-    width: "100%",
-    minHeight: 48,
-    borderRadius: 12,
-    border: "1px solid #ddd",
-    padding: 10,
-    outline: "none",
-    background: "#fff",
-    color: "#111",
-    fontSize: 13,
-    boxSizing: "border-box",
-  },
-
-  primaryButton: {
-    height: 48,
-    padding: "0 16px",
-    border: "none",
-    borderRadius: 12,
-    background: "#c91f28",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  buttonDisabled: {
-    opacity: 0.65,
-    cursor: "not-allowed",
-  },
-
-  content: {
-    background: "#fff",
-    borderRadius: 22,
-    padding: 22,
-    minHeight: 0,
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-  },
-
-  searchBar: (isMobile) => ({
-    display: "grid",
-    gridTemplateColumns: isMobile
-      ? "1fr"
-      : "minmax(0, 1fr) auto",
-    gap: 12,
-    marginBottom: 20,
-    minWidth: 0,
-  }),
-
-  searchInput: {
-    height: 48,
-    borderRadius: 12,
-    border: "1px solid #ddd",
-    padding: "0 14px",
-    outline: "none",
-    color: "#111",
-    fontSize: 14,
-    minWidth: 0,
-  },
-
-  searchButton: {
-    height: 48,
-    padding: "0 20px",
-    border: "none",
-    borderRadius: 12,
-    background: "#111",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  listHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
-    flexWrap: "wrap",
-  },
-
-  listMini: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#888",
-    fontWeight: 800,
-    marginBottom: 4,
-  },
-
-  listTitle: {
-    fontSize: 20,
-    fontWeight: 900,
-    color: "#111",
-  },
-
-  clearButton: {
-    border: "1px solid #ddd",
-    background: "#fff",
-    color: "#555",
-    borderRadius: 999,
-    padding: "9px 14px",
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  listArea: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-    maxHeight: "620px",
-    overflowY: "auto",
-    paddingRight: 5,
-    minWidth: 0,
-  },
-
-  row: (isMobile) => ({
-    background: "#f8f6f2",
-    borderRadius: 16,
-    padding: 13,
-    display: "grid",
-    gridTemplateColumns: isMobile
-      ? "1fr"
-      : "minmax(200px, 1fr) 150px 86px",
-    gap: isMobile ? 12 : 14,
-    alignItems: "center",
-    border: "1px solid #eee8df",
-    minWidth: 0,
-  }),
-
-  leftInfo: {
-    display: "flex",
-    gap: 12,
-    alignItems: "center",
-    minWidth: 0,
-  },
-
-  thumb: {
-    width: 54,
-    height: 54,
-    borderRadius: 12,
-    objectFit: "cover",
-    flexShrink: 0,
-  },
-
-  thumbEmpty: {
-    width: 54,
-    height: 54,
-    borderRadius: 12,
-    background: "#e3ddd5",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#777",
-    fontSize: 11,
-    fontWeight: 800,
-    flexShrink: 0,
-  },
-
-  productInfo: {
-    minWidth: 0,
-  },
-
-  productName: {
-    fontWeight: 800,
-    fontSize: 15,
-    color: "#111",
-    lineHeight: 1.35,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-
-  statusBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    width: "fit-content",
-    marginTop: 6,
-    padding: "5px 9px",
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: 800,
-  },
-
-  statusActive: {
-    background: "rgba(10,125,50,0.10)",
-    color: "#0a7d32",
-  },
-
-  statusInactive: {
-    background: "rgba(176,0,32,0.10)",
-    color: "#b00020",
-  },
-
-  priceArea: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-  },
-
-  valueLabel: {
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    color: "#8a8a8a",
-    fontWeight: 800,
-  },
-
-  priceValue: {
-    fontSize: 15,
-    color: "#111",
-    fontWeight: 900,
-  },
-
-  editButton: (isMobile) => ({
-    height: 40,
-    padding: "0 14px",
-    borderRadius: 999,
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontWeight: 700,
-    cursor: "pointer",
-    width: isMobile ? "100%" : 86,
-    justifySelf: isMobile ? "stretch" : "end",
-  }),
-
-  feedbackText: {
-    color: "#666",
-    fontSize: 14,
-  },
-
-  emptyBox: {
-    background: "#f8f6f2",
-    borderRadius: 18,
-    padding: 30,
-    textAlign: "center",
-  },
-
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 900,
-    color: "#111",
-    marginBottom: 6,
-  },
-
-  emptyText: {
-    color: "#666",
-    fontSize: 13,
-  },
-
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.4)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-    zIndex: 1000,
-  },
-
-  modal: {
-    width: "100%",
-    maxWidth: 500,
-    background: "#fff",
-    borderRadius: 22,
-    padding: 24,
-    display: "flex",
-    flexDirection: "column",
-    gap: 15,
-    boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
-  },
-
-  modalMini: {
-    fontSize: 11,
-    color: "#888",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    fontWeight: 800,
-    marginBottom: 4,
-  },
-
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 900,
-    color: "#111",
-  },
-
-  checkbox: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center",
-    color: "#111",
-    fontWeight: 700,
-    fontSize: 14,
-  },
-
-  modalButtons: {
-    display: "flex",
-    gap: 10,
-    marginTop: 5,
-  },
-
-  cancelButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    border: "1px solid #ddd",
-    background: "#fff",
-    color: "#111",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-};
 
 export default Products;
