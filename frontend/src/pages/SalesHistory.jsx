@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import { useResponsive } from "../hooks/useResponsive";
+
+import "./SalesHistory.css";
 
 function SalesHistory() {
   const [vendas, setVendas] = useState([]);
@@ -17,8 +18,6 @@ function SalesHistory() {
   const [editTextoOriginal, setEditTextoOriginal] = useState("");
   const [editValorTotal, setEditValorTotal] = useState("");
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
-
-  const { isMobile } = useResponsive();
 
   useEffect(() => {
     carregarHistorico();
@@ -128,16 +127,13 @@ function SalesHistory() {
         ? data.slice(0, 10)
         : data;
 
-    const [ano, mes, dia] =
-      String(texto).split("-");
+    const [ano, mes, dia] = String(texto).split("-");
 
     if (ano && mes && dia) {
       return `${dia}/${mes}/${ano}`;
     }
 
-    return new Date(data).toLocaleDateString(
-      "pt-BR"
-    );
+    return new Date(data).toLocaleDateString("pt-BR");
   }
 
   function gerarNumeroPedido(venda) {
@@ -156,9 +152,7 @@ function SalesHistory() {
   function abrirEdicao(venda) {
     setVendaEditando(venda);
 
-    setEditClienteNome(
-      venda.cliente_nome || ""
-    );
+    setEditClienteNome(venda.cliente_nome || "");
 
     setEditDataVenda(
       formatarDataInput(
@@ -195,22 +189,17 @@ function SalesHistory() {
       setMensagem("");
 
       if (!editTextoOriginal.trim()) {
-        setErro(
-          "A mensagem original é obrigatória."
-        );
+        setErro("A mensagem original é obrigatória.");
         return;
       }
 
-      const valorNumero =
-        Number(editValorTotal);
+      const valorNumero = Number(editValorTotal);
 
       if (
         Number.isNaN(valorNumero) ||
         valorNumero <= 0
       ) {
-        setErro(
-          "Informe um valor total válido."
-        );
+        setErro("Informe um valor total válido.");
         return;
       }
 
@@ -222,14 +211,12 @@ function SalesHistory() {
           cliente_nome:
             editClienteNome.trim() || null,
 
-          data_venda:
-            editDataVenda,
+          data_venda: editDataVenda,
 
           mensagem_original:
             editTextoOriginal,
 
-          valor_total:
-            valorNumero,
+          valor_total: valorNumero,
         }
       );
 
@@ -298,17 +285,14 @@ function SalesHistory() {
 
         <h2>Pedido</h2>
 
-        <pre>${
-          escaparHtml(
-            venda.texto_original ||
-              "Mensagem não disponível."
-          )
-        }</pre>
+        <pre>${escaparHtml(
+          venda.texto_original ||
+            "Mensagem não disponível."
+        )}</pre>
 
         <div class="totais">
           <p class="total">
-            Total:
-            ${formatarMoeda(total)}
+            Total: ${formatarMoeda(total)}
           </p>
         </div>
 
@@ -321,19 +305,15 @@ function SalesHistory() {
       !listaVendas ||
       listaVendas.length === 0
     ) {
-      setErro(
-        "Nenhuma venda para exportar."
-      );
+      setErro("Nenhuma venda para exportar.");
       return;
     }
 
-    const conteudo =
-      listaVendas
-        .map(montarHtmlPedido)
-        .join("");
+    const conteudo = listaVendas
+      .map(montarHtmlPedido)
+      .join("");
 
-    const janela =
-      window.open("", "_blank");
+    const janela = window.open("", "_blank");
 
     if (!janela) {
       setErro(
@@ -350,18 +330,13 @@ function SalesHistory() {
           <title>Pedidos</title>
 
           <style>
-
             * {
               box-sizing: border-box;
             }
 
             body {
-              font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-
-              color: #111;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #222;
               margin: 0;
               padding: 32px;
               background: #fff;
@@ -380,30 +355,30 @@ function SalesHistory() {
             }
 
             .cliente-topo {
-              font-size: 34px;
+              font-size: 30px;
               line-height: 1.1;
-              font-weight: 900;
+              font-weight: 700;
               text-transform: uppercase;
-              margin-bottom: 10px;
-              color: #111;
+              margin-bottom: 8px;
+              color: #222;
               word-break: break-word;
             }
 
             h1 {
-              font-size: 20px;
+              font-size: 18px;
               margin: 0 0 20px;
-              font-weight: 800;
-              color: #444;
+              font-weight: 600;
+              color: #666;
             }
 
             h2 {
-              font-size: 17px;
+              font-size: 16px;
               margin: 22px 0 10px;
-              font-weight: 800;
+              font-weight: 600;
             }
 
             p {
-              font-size: 15px;
+              font-size: 14px;
               line-height: 1.5;
               margin: 5px 0;
             }
@@ -413,26 +388,15 @@ function SalesHistory() {
             }
 
             pre {
-              font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-
+              font-family: Arial, Helvetica, sans-serif;
               white-space: pre-wrap;
               word-break: break-word;
-
-              background: #f5f5f5;
-
-              border-radius: 12px;
-
+              background: #f7f5f2;
+              border-radius: 10px;
               padding: 14px;
-
               font-size: 14px;
-
               line-height: 1.6;
-
-              border:
-                1px solid #e6e6e6;
+              border: 1px solid #ebe6df;
             }
 
             .totais {
@@ -440,38 +404,31 @@ function SalesHistory() {
             }
 
             .total {
-              font-weight: 900;
-              font-size: 20px;
+              font-weight: 700;
+              font-size: 19px;
               margin-top: 8px;
             }
 
             @media print {
-
               body {
                 padding: 24px;
               }
 
               .cliente-topo {
-                font-size: 30px;
+                font-size: 28px;
               }
-
             }
-
           </style>
         </head>
 
         <body>
-
           ${conteudo}
 
           <script>
-
             window.onload = function () {
               window.print();
             };
-
           </script>
-
         </body>
       </html>
     `);
@@ -488,82 +445,61 @@ function SalesHistory() {
   }
 
   return (
-    <div style={styles.page}>
+    <div className="sales-history-page">
 
-      <header
-        style={styles.pageHeader(isMobile)}
-      >
-
+      <header className="sales-history-header">
         <div>
-
-          <p style={styles.pageMini}>
+          <p className="sales-history-eyebrow">
             Vendas
           </p>
 
-          <h1
-            style={styles.pageTitle(
-              isMobile
-            )}
-          >
+          <h1 className="sales-history-title">
             Histórico
           </h1>
 
-          <p style={styles.pageSubtitle}>
-            Pesquise, edite e acompanhe
-            todas as vendas registradas.
+          <p className="sales-history-subtitle">
+            Pesquise, edite e acompanhe todas as vendas registradas.
           </p>
-
         </div>
 
-        <div style={styles.headerActions}>
-
-          <div style={styles.totalBadge}>
+        <div className="sales-history-header-actions">
+          <span className="sales-history-counter">
             {vendas.length}{" "}
             {vendas.length === 1
               ? "venda"
               : "vendas"}
-          </div>
+          </span>
 
           <button
             type="button"
-            onClick={
-              exportarTodasVendasPdf
-            }
-            style={styles.exportButton}
+            onClick={exportarTodasVendasPdf}
+            className="sales-history-export"
           >
             Exportar PDF
           </button>
-
         </div>
-
       </header>
 
       {erro && (
-        <div style={styles.alertError}>
+        <div className="sales-history-alert error">
           {erro}
         </div>
       )}
 
       {mensagem && (
-        <div style={styles.alertSuccess}>
+        <div className="sales-history-alert success">
           {mensagem}
         </div>
       )}
 
-      <section style={styles.tableCard}>
+      <section className="sales-history-content">
 
         <form
           onSubmit={handleBuscar}
-          style={styles.toolbar(
-            isMobile
-          )}
+          className="sales-history-toolbar"
         >
-
-          <div style={styles.searchBox}>
-
-            <span
-              style={styles.searchIcon}
-            >
+          <div className="sales-history-search">
+            <span className="sales-history-search-icon">
               ⌕
             </span>
 
@@ -572,33 +508,24 @@ function SalesHistory() {
               placeholder="Buscar por nome do cliente..."
               value={clienteBusca}
               onChange={(e) =>
-                setClienteBusca(
-                  e.target.value
-                )
+                setClienteBusca(e.target.value)
               }
-              style={styles.searchInput}
             />
-
           </div>
 
-          <div style={styles.dateBox}>
-
+          <div className="sales-history-date">
             <input
               type="date"
               value={dataBusca}
               onChange={(e) =>
-                setDataBusca(
-                  e.target.value
-                )
+                setDataBusca(e.target.value)
               }
-              style={styles.dateInput}
             />
-
           </div>
 
           <button
             type="submit"
-            style={styles.searchButton}
+            className="sales-history-search-button"
           >
             Buscar
           </button>
@@ -606,395 +533,205 @@ function SalesHistory() {
           <button
             type="button"
             onClick={limparFiltros}
-            style={styles.clearButton}
+            className="sales-history-clear-button"
           >
             Limpar
           </button>
-
         </form>
 
-        <div
-          style={styles.listViewport(
-            isMobile
-          )}
-        >
+        <div className="sales-history-list">
 
           {loading ? (
-
-            <div style={styles.emptyBox}>
-              <p style={styles.emptyTitle}>
-                Carregando histórico...
-              </p>
+            <div className="sales-history-empty">
+              <p>Carregando histórico...</p>
             </div>
-
           ) : vendas.length === 0 ? (
-
-            <div style={styles.emptyBox}>
-
-              <p style={styles.emptyTitle}>
+            <div className="sales-history-empty">
+              <strong>
                 Nenhuma venda encontrada
-              </p>
+              </strong>
 
-              <p style={styles.emptyText}>
-                Tente alterar os filtros
-                ou registre uma nova venda.
+              <p>
+                Tente alterar os filtros ou registre uma nova venda.
               </p>
-
             </div>
-
           ) : (
+            vendas.map((venda) => (
+              <article
+                key={venda.id}
+                className="sales-history-sale"
+              >
+                <div className="sales-history-sale-top">
 
-            <div style={styles.rows}>
+                  <div className="sales-history-sale-identity">
+                    <span className="sales-history-order">
+                      #{gerarNumeroPedido(venda)}
+                    </span>
 
-              {vendas.map((venda) => (
+                    <div>
+                      <h3>
+                        {venda.cliente_nome ||
+                          "Cliente não informado"}
+                      </h3>
 
-                <article
-                  key={venda.id}
-                  style={styles.saleCard(
-                    isMobile
-                  )}
-                >
-
-                  <div
-                    style={styles.saleHeader(
-                      isMobile
-                    )}
-                  >
-
-                    <div
-                      style={
-                        styles.saleIdentity
-                      }
-                    >
-
-                      <div
-                        style={
-                          styles.orderNumber
-                        }
-                      >
-                        #
-                        {gerarNumeroPedido(
-                          venda
-                        )}
-                      </div>
-
-                      <div>
-
-                        <h3
-                          style={
-                            styles.clientName
-                          }
-                        >
-                          {venda.cliente_nome ||
-                            "Cliente não informado"}
-                        </h3>
-
-                        <p
-                          style={
-                            styles.saleMeta
-                          }
-                        >
-                          Vendedor:{" "}
+                      <div className="sales-history-meta">
+                        <span>
                           {venda.usuario_nome ||
-                            "Não informado"}
-                        </p>
+                            "Vendedor não informado"}
+                        </span>
 
-                        <p
-                          style={
-                            styles.saleMeta
-                          }
-                        >
-                          Data:{" "}
+                        <span className="sales-history-meta-dot">
+                          ·
+                        </span>
+
+                        <span>
                           {formatarDataExibicao(
                             venda.data_venda ||
                               venda.data_criacao
                           )}
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                    <div
-                      style={
-                        styles.saleTotalBox
-                      }
-                    >
-
-                      <span
-                        style={
-                          styles.totalLabel
-                        }
-                      >
-                        Total
-                      </span>
-
-                      <strong
-                        style={
-                          styles.totalValue
-                        }
-                      >
-                        {formatarMoeda(
-                          venda.valor_total
-                        )}
-                      </strong>
-
-                    </div>
-
-                  </div>
-
-                  <div
-                    style={
-                      styles.messageBox
-                    }
-                  >
-
-                    <span
-                      style={
-                        styles.messageLabel
-                      }
-                    >
-                      Pedido
-                    </span>
-
-                    <p
-                      style={
-                        styles.messageText
-                      }
-                    >
-                      {venda.texto_original ||
-                        "Mensagem não disponível."}
-                    </p>
-
-                  </div>
-
-                  <div
-                    style={styles.saleFooter(
-                      isMobile
-                    )}
-                  >
-
-                    <div
-                      style={
-                        styles.saleStatus
-                      }
-                    >
-
-                      <span
-                        style={
-                          styles.statusBadge
-                        }
-                      >
-                        Venda registrada
-                      </span>
-
-                      {venda.editada && (
-                        <span
-                          style={
-                            styles.editedBadge
-                          }
-                        >
-                          Editada
                         </span>
-                      )}
-
+                      </div>
                     </div>
-
-                    <div
-                      style={
-                        styles.actionGroup
-                      }
-                    >
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          abrirEdicao(venda)
-                        }
-                        style={
-                          styles.editButton
-                        }
-                      >
-                        Editar
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          exportarVendaPdf(
-                            venda
-                          )
-                        }
-                        style={
-                          styles.pdfButton
-                        }
-                      >
-                        PDF
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          excluirVenda(
-                            venda.id
-                          )
-                        }
-                        style={
-                          styles.deleteButton
-                        }
-                      >
-                        Excluir
-                      </button>
-
-                    </div>
-
                   </div>
 
-                </article>
+                  <div className="sales-history-total">
+                    <span>Total</span>
 
-              ))}
+                    <strong>
+                      {formatarMoeda(
+                        venda.valor_total
+                      )}
+                    </strong>
+                  </div>
+                </div>
 
-            </div>
+                <div className="sales-history-message">
+                  <span className="sales-history-message-label">
+                    Pedido
+                  </span>
 
+                  <p>
+                    {venda.texto_original ||
+                      "Mensagem não disponível."}
+                  </p>
+                </div>
+
+                <div className="sales-history-sale-bottom">
+
+                  <div className="sales-history-status">
+                    <span className="sales-history-status-dot" />
+
+                    <span>Venda registrada</span>
+
+                    {venda.editada && (
+                      <span className="sales-history-edited">
+                        Editada
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="sales-history-actions">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        abrirEdicao(venda)
+                      }
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        exportarVendaPdf(venda)
+                      }
+                    >
+                      PDF
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        excluirVenda(venda.id)
+                      }
+                      className="danger"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))
           )}
-
         </div>
-
       </section>
 
       {vendaEditando && (
+        <div className="sales-history-modal-overlay">
+          <div className="sales-history-modal">
 
-        <div style={styles.overlay}>
-
-          <div
-            style={styles.modal(
-              isMobile
-            )}
-          >
-
-            <div
-              style={
-                styles.modalHeader
-              }
-            >
-
+            <div className="sales-history-modal-header">
               <div>
-
-                <p
-                  style={
-                    styles.pageMini
-                  }
-                >
+                <p className="sales-history-eyebrow">
                   Editar venda
                 </p>
 
-                <h2
-                  style={
-                    styles.modalTitle
-                  }
-                >
+                <h2>
                   Pedido{" "}
                   {gerarNumeroPedido(
                     vendaEditando
                   )}
                 </h2>
-
               </div>
 
               <button
                 type="button"
                 onClick={fecharEdicao}
-                style={
-                  styles.closeButton
-                }
+                className="sales-history-modal-close"
               >
                 Fechar
               </button>
-
             </div>
 
-            <div
-              style={styles.modalGrid(
-                isMobile
-              )}
-            >
+            <div className="sales-history-modal-grid">
 
-              <div>
+              <div className="sales-history-modal-fields">
 
-                <div
-                  style={
-                    styles.fieldGroup
-                  }
-                >
-
-                  <label
-                    style={
-                      styles.label
-                    }
-                  >
+                <div className="sales-history-field">
+                  <label>
                     Nome do cliente
                   </label>
 
                   <input
                     type="text"
-                    value={
-                      editClienteNome
-                    }
+                    value={editClienteNome}
                     onChange={(e) =>
                       setEditClienteNome(
                         e.target.value
                       )
                     }
                     placeholder="Nome do cliente"
-                    style={
-                      styles.input
-                    }
                   />
-
                 </div>
 
-                <div
-                  style={
-                    styles.fieldGroup
-                  }
-                >
-
-                  <label
-                    style={
-                      styles.label
-                    }
-                  >
+                <div className="sales-history-field">
+                  <label>
                     Data da venda
                   </label>
 
                   <input
                     type="date"
-                    value={
-                      editDataVenda
-                    }
+                    value={editDataVenda}
                     onChange={(e) =>
                       setEditDataVenda(
                         e.target.value
                       )
                     }
-                    style={
-                      styles.input
-                    }
                   />
-
                 </div>
 
-                <div
-                  style={
-                    styles.fieldGroup
-                  }
-                >
-
-                  <label
-                    style={
-                      styles.label
-                    }
-                  >
+                <div className="sales-history-field">
+                  <label>
                     Valor da venda
                   </label>
 
@@ -1002,757 +739,74 @@ function SalesHistory() {
                     type="number"
                     min="0.01"
                     step="0.01"
-                    value={
-                      editValorTotal
-                    }
+                    value={editValorTotal}
                     onChange={(e) =>
                       setEditValorTotal(
                         e.target.value
                       )
                     }
-                    style={
-                      styles.input
-                    }
                   />
-
                 </div>
 
-                <div
-                  style={
-                    styles.summaryCard
-                  }
-                >
-
-                  <p
-                    style={
-                      styles.summaryMini
-                    }
-                  >
+                <div className="sales-history-value-preview">
+                  <span>
                     Valor registrado
-                  </p>
+                  </span>
 
-                  <h3
-                    style={
-                      styles.summaryValue
-                    }
-                  >
+                  <strong>
                     {formatarMoeda(
                       editValorTotal
                     )}
-                  </h3>
+                  </strong>
 
-                  <p
-                    style={
-                      styles.summaryText
-                    }
-                  >
-                    Esse valor será usado
-                    no dashboard, ranking e
-                    desempenho da equipe.
+                  <p>
+                    Esse valor será usado no dashboard,
+                    ranking e desempenho da equipe.
                   </p>
-
                 </div>
-
               </div>
 
-              <div
-                style={
-                  styles.messageEditor
-                }
-              >
-
-                <label
-                  style={
-                    styles.label
-                  }
-                >
+              <div className="sales-history-message-editor">
+                <label>
                   Mensagem original
                 </label>
 
                 <textarea
-                  value={
-                    editTextoOriginal
-                  }
+                  value={editTextoOriginal}
                   onChange={(e) =>
                     setEditTextoOriginal(
                       e.target.value
                     )
                   }
-                  style={
-                    styles.textarea
-                  }
                 />
-
               </div>
-
             </div>
 
-            <div
-              style={
-                styles.modalActions
-              }
-            >
-
+            <div className="sales-history-modal-actions">
               <button
                 type="button"
                 onClick={fecharEdicao}
-                style={
-                  styles.cancelButton
-                }
+                className="secondary"
               >
                 Cancelar
               </button>
 
               <button
                 type="button"
-                onClick={
-                  salvarEdicaoVenda
-                }
-                disabled={
-                  salvandoEdicao
-                }
-                style={{
-                  ...styles.saveButton,
-
-                  ...(salvandoEdicao
-                    ? styles.disabledButton
-                    : {}),
-                }}
+                onClick={salvarEdicaoVenda}
+                disabled={salvandoEdicao}
+                className="primary"
               >
                 {salvandoEdicao
                   ? "Salvando..."
                   : "Salvar alterações"}
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       )}
-
     </div>
   );
 }
-
-const styles = {
-  page: {
-    width: "100%",
-    minHeight: "100%",
-    display: "flex",
-    flexDirection: "column",
-    gap: 20,
-  },
-
-  pageHeader: (isMobile) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile
-      ? "flex-start"
-      : "center",
-    flexDirection: isMobile
-      ? "column"
-      : "row",
-    gap: 16,
-    flexWrap: "wrap",
-  }),
-
-  pageMini: {
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#7b7b7b",
-    fontWeight: 700,
-    marginBottom: 6,
-  },
-
-  pageTitle: (isMobile) => ({
-    fontSize: isMobile
-      ? 28
-      : 34,
-    fontWeight: 900,
-    letterSpacing: "-0.05em",
-    color: "#111",
-  }),
-
-  pageSubtitle: {
-    color: "#666",
-    fontSize: 15,
-    marginTop: 6,
-    lineHeight: 1.6,
-  },
-
-  headerActions: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
-  },
-
-  totalBadge: {
-    padding: "11px 15px",
-    borderRadius: 999,
-    background:
-      "rgba(31,79,163,0.10)",
-    color: "#1f4fa3",
-    fontSize: 13,
-    fontWeight: 800,
-  },
-
-  exportButton: {
-    height: 42,
-    padding: "0 16px",
-    borderRadius: 999,
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  alertError: {
-    background:
-      "rgba(176,0,32,0.08)",
-    color: "#b00020",
-    border:
-      "1px solid rgba(176,0,32,0.12)",
-    borderRadius: 14,
-    padding: "12px 14px",
-    fontWeight: 700,
-    fontSize: 14,
-  },
-
-  alertSuccess: {
-    background:
-      "rgba(10,125,50,0.08)",
-    color: "#0a7d32",
-    border:
-      "1px solid rgba(10,125,50,0.12)",
-    borderRadius: 14,
-    padding: "12px 14px",
-    fontWeight: 700,
-    fontSize: 14,
-  },
-
-  tableCard: {
-    background: "#fff",
-    borderRadius: 24,
-    padding: 22,
-    boxShadow:
-      "0 6px 18px rgba(0,0,0,0.05)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 18,
-    minHeight: 520,
-  },
-
-  toolbar: (isMobile) => ({
-    display: "grid",
-    gridTemplateColumns:
-      isMobile
-        ? "1fr"
-        : "1.4fr 220px auto auto",
-    alignItems: "center",
-    gap: 12,
-  }),
-
-  searchBox: {
-    width: "100%",
-    height: 52,
-    background: "#f5f2ec",
-    borderRadius: 16,
-    display: "grid",
-    gridTemplateColumns:
-      "24px 1fr",
-    alignItems: "center",
-    gap: 10,
-    padding: "0 14px",
-    border:
-      "1px solid #ece5da",
-  },
-
-  searchIcon: {
-    fontSize: 18,
-    color: "#7b7b7b",
-    textAlign: "center",
-  },
-
-  searchInput: {
-    height: "100%",
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    fontSize: 14,
-    color: "#111",
-    minWidth: 0,
-  },
-
-  dateBox: {
-    width: "100%",
-    height: 52,
-    background: "#f5f2ec",
-    borderRadius: 16,
-    display: "flex",
-    alignItems: "center",
-    padding: "0 14px",
-    border:
-      "1px solid #ece5da",
-  },
-
-  dateInput: {
-    width: "100%",
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    color: "#111",
-    fontSize: 14,
-  },
-
-  searchButton: {
-    height: 52,
-    padding: "0 20px",
-    borderRadius: 14,
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  clearButton: {
-    height: 52,
-    padding: "0 20px",
-    borderRadius: 14,
-    border: "1px solid #ddd",
-    background: "#fff",
-    color: "#111",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  listViewport: (isMobile) => ({
-    maxHeight: isMobile
-      ? "none"
-      : "calc(100vh - 350px)",
-    overflowY: isMobile
-      ? "visible"
-      : "auto",
-    paddingRight: isMobile
-      ? 0
-      : 4,
-  }),
-
-  rows: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 14,
-  },
-
-  saleCard: (isMobile) => ({
-    background: "#f8f6f2",
-    borderRadius: 20,
-    padding: isMobile
-      ? 15
-      : 18,
-    border:
-      "1px solid #eee8df",
-    display: "flex",
-    flexDirection: "column",
-    gap: 15,
-  }),
-
-  saleHeader: (isMobile) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile
-      ? "stretch"
-      : "flex-start",
-    gap: 16,
-    flexDirection: isMobile
-      ? "column"
-      : "row",
-  }),
-
-  saleIdentity: {
-    display: "flex",
-    gap: 12,
-    alignItems: "flex-start",
-    minWidth: 0,
-  },
-
-  orderNumber: {
-    minWidth: 46,
-    height: 46,
-    padding: "0 8px",
-    borderRadius: 13,
-    background: "#171921",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 10,
-    fontWeight: 900,
-    flexShrink: 0,
-  },
-
-  clientName: {
-    fontSize: 20,
-    fontWeight: 900,
-    color: "#111",
-    letterSpacing:
-      "-0.03em",
-    marginBottom: 4,
-  },
-
-  saleMeta: {
-    color: "#777",
-    fontSize: 13,
-    lineHeight: 1.5,
-  },
-
-  saleTotalBox: {
-    background: "#fff",
-    border:
-      "1px solid #ebe3d8",
-    borderRadius: 16,
-    padding: "11px 14px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    minWidth: 145,
-  },
-
-  totalLabel: {
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#888",
-    fontWeight: 800,
-  },
-
-  totalValue: {
-    fontSize: 19,
-    color: "#111",
-    fontWeight: 900,
-    whiteSpace: "nowrap",
-  },
-
-  messageBox: {
-    background: "#fff",
-    borderRadius: 16,
-    padding: 14,
-    border:
-      "1px solid #ebe3d8",
-  },
-
-  messageLabel: {
-    display: "block",
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#8a8a8a",
-    fontWeight: 800,
-    marginBottom: 8,
-  },
-
-  messageText: {
-    color: "#444",
-    fontSize: 13,
-    lineHeight: 1.7,
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-word",
-    maxHeight: 150,
-    overflowY: "auto",
-  },
-
-  saleFooter: (isMobile) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile
-      ? "stretch"
-      : "center",
-    flexDirection: isMobile
-      ? "column"
-      : "row",
-    gap: 12,
-  }),
-
-  saleStatus: {
-    display: "flex",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-
-  statusBadge: {
-    padding: "8px 11px",
-    borderRadius: 999,
-    background:
-      "rgba(31,79,163,0.10)",
-    color: "#1f4fa3",
-    fontSize: 11,
-    fontWeight: 800,
-  },
-
-  editedBadge: {
-    padding: "8px 11px",
-    borderRadius: 999,
-    background:
-      "rgba(241,203,58,0.25)",
-    color: "#6f5700",
-    fontSize: 11,
-    fontWeight: 800,
-  },
-
-  actionGroup: {
-    display: "flex",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-
-  editButton: {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "none",
-    background:
-      "rgba(17,17,17,0.10)",
-    color: "#111",
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  pdfButton: {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "none",
-    background:
-      "rgba(31,79,163,0.10)",
-    color: "#1f4fa3",
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  deleteButton: {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "none",
-    background:
-      "rgba(176,0,32,0.10)",
-    color: "#b00020",
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  emptyBox: {
-    borderRadius: 20,
-    background: "#f8f6f2",
-    padding: 32,
-    textAlign: "center",
-  },
-
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 800,
-    color: "#111",
-    marginBottom: 8,
-  },
-
-  emptyText: {
-    color: "#666",
-    fontSize: 14,
-  },
-
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    zIndex: 1000,
-    background:
-      "rgba(0,0,0,0.45)",
-    padding: 20,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  modal: (isMobile) => ({
-    width: "100%",
-    maxWidth: 920,
-    maxHeight:
-      "calc(100vh - 40px)",
-    background: "#fff",
-    borderRadius: 24,
-    padding: isMobile
-      ? 18
-      : 24,
-    boxShadow:
-      "0 22px 70px rgba(0,0,0,0.24)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 20,
-    overflowY: "auto",
-  }),
-
-  modalHeader: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent:
-      "space-between",
-    gap: 16,
-  },
-
-  modalTitle: {
-    fontSize: 27,
-    fontWeight: 900,
-    color: "#111",
-    letterSpacing:
-      "-0.04em",
-  },
-
-  closeButton: {
-    height: 42,
-    padding: "0 16px",
-    borderRadius: 999,
-    border:
-      "1px solid #ddd",
-    background: "#fff",
-    color: "#111",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  modalGrid: (isMobile) => ({
-    display: "grid",
-    gridTemplateColumns:
-      isMobile
-        ? "1fr"
-        : "300px minmax(0, 1fr)",
-    gap: 18,
-  }),
-
-  fieldGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    marginBottom: 14,
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: 700,
-    color: "#444",
-  },
-
-  input: {
-    width: "100%",
-    height: 52,
-    borderRadius: 14,
-    border:
-      "1px solid #ddd",
-    padding: "0 14px",
-    background: "#fff",
-    color: "#111",
-    fontSize: 14,
-    outline: "none",
-    boxSizing: "border-box",
-  },
-
-  summaryCard: {
-    background: "#171921",
-    color: "#fff",
-    borderRadius: 20,
-    padding: 18,
-    marginTop: 18,
-  },
-
-  summaryMini: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color:
-      "rgba(255,255,255,0.55)",
-    fontWeight: 700,
-    marginBottom: 8,
-  },
-
-  summaryValue: {
-    fontSize: 30,
-    lineHeight: 1,
-    fontWeight: 900,
-    letterSpacing:
-      "-0.05em",
-    marginBottom: 9,
-  },
-
-  summaryText: {
-    color:
-      "rgba(255,255,255,0.62)",
-    fontSize: 13,
-    lineHeight: 1.55,
-  },
-
-  messageEditor: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    minHeight: 0,
-  },
-
-  textarea: {
-    width: "100%",
-    minHeight: 330,
-    flex: 1,
-    resize: "vertical",
-    borderRadius: 16,
-    border:
-      "1px solid #ddd",
-    padding: 15,
-    background: "#f8f6f2",
-    color: "#111",
-    fontSize: 14,
-    lineHeight: 1.7,
-    outline: "none",
-    boxSizing: "border-box",
-  },
-
-  modalActions: {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: 10,
-    flexWrap: "wrap",
-  },
-
-  cancelButton: {
-    height: 50,
-    padding: "0 18px",
-    borderRadius: 14,
-    border:
-      "1px solid #ddd",
-    background: "#fff",
-    color: "#111",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  saveButton: {
-    height: 50,
-    padding: "0 20px",
-    borderRadius: 14,
-    border: "none",
-    background:
-      "linear-gradient(135deg, #c91f28 0%, #9f161e 100%)",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-
-  disabledButton: {
-    opacity: 0.65,
-    cursor: "not-allowed",
-  },
-};
 
 export default SalesHistory;
