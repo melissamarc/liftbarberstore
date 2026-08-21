@@ -1,0 +1,364 @@
+/* DashboardLayout.css */
+
+.dashboard-page {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg-page);
+}
+
+.dashboard-shell {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  background: var(--bg-page);
+
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+/* SIDEBAR */
+
+.dashboard-sidebar {
+  min-height: 100vh;
+  background: var(--bg-sidebar);
+  color: #fff;
+
+  padding: 28px 20px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+
+  border: none;
+  border-radius: 0;
+
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+/* MARCA */
+
+.dashboard-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.dashboard-brand-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+
+  color: #fff;
+
+  border: none;
+}
+
+.dashboard-brand-mini {
+  margin-bottom: 2px;
+
+  font-size: 10px;
+  font-weight: 500;
+
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.dashboard-brand-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+/* MENU */
+
+.dashboard-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dashboard-nav-item {
+  min-height: 46px;
+
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  padding: 8px 10px;
+
+  border-radius: 9px;
+
+  color: rgba(255, 255, 255, 0.58);
+
+  font-size: 13px;
+  font-weight: 500;
+
+  text-decoration: none;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.dashboard-nav-item:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.dashboard-nav-item.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ÍCONES */
+
+.dashboard-nav-icon {
+  width: 27px;
+  height: 27px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 7px;
+
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.dashboard-nav-item.active .dashboard-nav-icon {
+  background: rgba(255, 255, 255, 0.075);
+  color: #fff;
+}
+
+/* RODAPÉ DA SIDEBAR */
+
+.dashboard-sidebar-footer {
+  margin-top: 30px;
+}
+
+.dashboard-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 8px 2px 14px;
+}
+
+.dashboard-user-avatar {
+  width: 40px;
+  height: 40px;
+
+  border-radius: 50%;
+  object-fit: cover;
+
+  flex-shrink: 0;
+}
+
+.dashboard-user-avatar-placeholder {
+  width: 40px;
+  height: 40px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  color: rgba(255, 255, 255, 0.9);
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-user-info {
+  min-width: 0;
+}
+
+.dashboard-user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-user-role {
+  margin-top: 2px;
+
+  font-size: 11px;
+  font-weight: 400;
+
+  color: rgba(255, 255, 255, 0.38);
+  text-transform: capitalize;
+}
+
+/* SAIR */
+
+.dashboard-logout {
+  width: 100%;
+  height: 38px;
+
+  margin-top: 4px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+
+  color: rgba(255, 255, 255, 0.48);
+
+  font-size: 12px;
+  font-weight: 500;
+
+  text-align: left;
+
+  padding: 0 4px;
+
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.dashboard-logout:hover {
+  color: #fff;
+}
+
+/* CONTEÚDO */
+
+.dashboard-main {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+
+  background: var(--bg-page);
+
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+
+  overflow-y: auto;
+}
+
+.dashboard-content {
+  width: 100%;
+
+  margin: 0;
+
+  padding: 32px 36px 48px;
+
+  background: transparent;
+}
+
+/* TABLET */
+
+@media (max-width: 1100px) {
+  .dashboard-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .dashboard-sidebar {
+    padding: 24px 16px;
+  }
+
+  .dashboard-brand-title {
+    font-size: 15px;
+  }
+
+  .dashboard-nav-item {
+    font-size: 12px;
+  }
+
+  .dashboard-content {
+    padding: 28px 26px 42px;
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .dashboard-sidebar {
+    min-height: auto;
+
+    position: relative;
+
+    padding: 16px 14px;
+
+    gap: 14px;
+  }
+
+  .dashboard-brand {
+    margin-bottom: 16px;
+  }
+
+  .dashboard-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .dashboard-nav-item {
+    min-height: 44px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .dashboard-sidebar-footer {
+    margin-top: 10px;
+  }
+
+  .dashboard-user {
+    padding: 8px 2px 10px;
+  }
+
+  .dashboard-main {
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-content {
+    padding: 22px 16px 38px;
+  }
+}
+
+.dashboard-brand-mark {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
