@@ -1,15 +1,17 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
 import Products from "../pages/Products";
-import NewManualSale from "../pages/NewManualSale";
 import NewAISale from "../pages/NewAISale";
 import SalesHistory from "../pages/SalesHistory";
 import Ranking from "../pages/Ranking";
 import Users from "../pages/Users";
 import Profile from "../pages/Profile";
+import Performance from "../pages/Performance";
+
 import DashboardLayout from "../layouts/DashboardLayout";
 import { useAuth } from "../hooks/useAuth";
 
@@ -58,17 +60,6 @@ function AppRoutes() {
         />
 
         <Route
-          path="/venda-manual"
-          element={
-            <RotaPrivada>
-              <DashboardLayout>
-                <NewManualSale />
-              </DashboardLayout>
-            </RotaPrivada>
-          }
-        />
-
-        <Route
           path="/venda-ia"
           element={
             <RotaPrivada>
@@ -96,6 +87,17 @@ function AppRoutes() {
             <RotaPrivada>
               <DashboardLayout>
                 <Ranking />
+              </DashboardLayout>
+            </RotaPrivada>
+          }
+        />
+
+        <Route
+          path="/desempenho"
+          element={
+            <RotaPrivada>
+              <DashboardLayout>
+                <Performance />
               </DashboardLayout>
             </RotaPrivada>
           }

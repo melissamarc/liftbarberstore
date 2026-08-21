@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import api, { getImageUrl } from "../services/api";
+import { useEffect, useState } from "react";
+import api from "../services/api";
 import { useResponsive } from "../hooks/useResponsive";
 
 function SalesHistory() {
   const [vendas, setVendas] = useState([]);
-  const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingProdutos, setLoadingProdutos] = useState(true);
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
+
   const [clienteBusca, setClienteBusca] = useState("");
   const [dataBusca, setDataBusca] = useState("");
 
@@ -17,70 +16,39 @@ function SalesHistory() {
   const [editDataVenda, setEditDataVenda] = useState("");
   const [editTextoOriginal, setEditTextoOriginal] = useState("");
   const [editValorTotal, setEditValorTotal] = useState("");
-  const [editItens, setEditItens] = useState([]);
-  const [editBuscaProduto, setEditBuscaProduto] = useState("");
-  const [editProdutoSelecionado, setEditProdutoSelecionado] = useState(null);
-  const [editQuantidade, setEditQuantidade] = useState(1);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   const { isMobile } = useResponsive();
 
   useEffect(() => {
     carregarHistorico();
-    carregarProdutos();
   }, []);
 
-  const produtosFiltrados = useMemo(() => {
-    const produtosAtivos = produtos.filter((produto) => produto.ativo);
-
-    if (!editBuscaProduto.trim()) return produtosAtivos.slice(0, 6);
-
-    return produtosAtivos
-      .filter((produto) =>
-        produto.nome.toLowerCase().includes(editBuscaProduto.toLowerCase())
-      )
-      .slice(0, 8);
-  }, [produtos, editBuscaProduto]);
-
-  const totalEdicao = useMemo(() => {
-    if (vendaEditando?.origem === "ia") {
-      return Number(editValorTotal || 0);
-    }
-
-    return editItens.reduce((acc, item) => {
-      return acc + Number(item.preco || 0) * Number(item.quantidade || 0);
-    }, 0);
-  }, [editItens, editValorTotal, vendaEditando]);
-
-  async function carregarHistorico() {
+  async function carregarHistorico(
+    cliente = clienteBusca,
+    data = dataBusca
+  ) {
     try {
       setLoading(true);
       setErro("");
 
       const response = await api.get("/sales", {
         params: {
-          cliente: clienteBusca,
-          data: dataBusca,
+          cliente,
+          data,
         },
       });
 
-      setVendas(response.data);
+      setVendas(response.data || []);
     } catch (error) {
-      setErro("Erro ao carregar histórico.");
+      console.error("Erro ao carregar histórico:", error);
+
+      setErro(
+        error.response?.data?.message ||
+          "Erro ao carregar histórico."
+      );
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function carregarProdutos() {
-    try {
-      setLoadingProdutos(true);
-      const response = await api.get("/products");
-      setProdutos(response.data || []);
-    } catch (error) {
-      setErro("Erro ao carregar produtos.");
-    } finally {
-      setLoadingProdutos(false);
     }
   }
 
@@ -92,20 +60,14 @@ function SalesHistory() {
   async function limparFiltros() {
     setClienteBusca("");
     setDataBusca("");
-
-    try {
-      setLoading(true);
-      const response = await api.get("/sales");
-      setVendas(response.data);
-    } catch (error) {
-      setErro("Erro ao carregar histórico.");
-    } finally {
-      setLoading(false);
-    }
+    await carregarHistorico("", "");
   }
 
   async function excluirVenda(id) {
-    const confirmar = window.confirm("Tem certeza que deseja excluir esta venda?");
+    const confirmar = window.confirm(
+      "Tem certeza que deseja excluir esta venda?"
+    );
+
     if (!confirmar) return;
 
     try {
@@ -115,9 +77,15 @@ function SalesHistory() {
       await api.delete(`/sales/${id}`);
 
       setMensagem("Venda excluída com sucesso.");
+
       await carregarHistorico();
     } catch (error) {
-      setErro(error.response?.data?.message || "Erro ao excluir venda.");
+      console.error("Erro ao excluir venda:", error);
+
+      setErro(
+        error.response?.data?.message ||
+          "Erro ao excluir venda."
+      );
     }
   }
 
@@ -129,17 +97,47 @@ function SalesHistory() {
   }
 
   function formatarDataInput(data) {
-    if (!data) return new Date().toISOString().slice(0, 10);
+    if (!data) {
+      return new Date().toISOString().slice(0, 10);
+    }
 
-    if (typeof data === "string" && data.includes("T")) {
+    if (
+      typeof data === "string" &&
+      data.includes("T")
+    ) {
       return data.slice(0, 10);
     }
 
-    if (typeof data === "string" && data.length >= 10) {
+    if (
+      typeof data === "string" &&
+      data.length >= 10
+    ) {
       return data.slice(0, 10);
     }
 
-    return new Date(data).toISOString().slice(0, 10);
+    return new Date(data)
+      .toISOString()
+      .slice(0, 10);
+  }
+
+  function formatarDataExibicao(data) {
+    if (!data) return "Não informada";
+
+    const texto =
+      typeof data === "string"
+        ? data.slice(0, 10)
+        : data;
+
+    const [ano, mes, dia] =
+      String(texto).split("-");
+
+    if (ano && mes && dia) {
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    return new Date(data).toLocaleDateString(
+      "pt-BR"
+    );
   }
 
   function gerarNumeroPedido(venda) {
@@ -156,29 +154,27 @@ function SalesHistory() {
   }
 
   function abrirEdicao(venda) {
-    const itensFormatados = (venda.itens || []).map((item) => {
-      const produto = produtos.find(
-        (produtoAtual) => Number(produtoAtual.id) === Number(item.produto_id)
-      );
-
-      return {
-        produto_id: item.produto_id,
-        nome: item.produto_nome,
-        preco: Number(item.preco_unitario || produto?.preco || 0),
-        quantidade: Number(item.quantidade || 1),
-        foto_produto: produto?.foto_produto || null,
-      };
-    });
-
     setVendaEditando(venda);
-    setEditClienteNome(venda.cliente_nome || "");
-    setEditDataVenda(formatarDataInput(venda.data_venda || venda.data_criacao));
-    setEditTextoOriginal(venda.texto_original || "");
-    setEditValorTotal(Number(venda.valor_total || 0).toFixed(2));
-    setEditItens(itensFormatados);
-    setEditBuscaProduto("");
-    setEditProdutoSelecionado(null);
-    setEditQuantidade(1);
+
+    setEditClienteNome(
+      venda.cliente_nome || ""
+    );
+
+    setEditDataVenda(
+      formatarDataInput(
+        venda.data_venda ||
+          venda.data_criacao
+      )
+    );
+
+    setEditTextoOriginal(
+      venda.texto_original || ""
+    );
+
+    setEditValorTotal(
+      Number(venda.valor_total || 0).toFixed(2)
+    );
+
     setErro("");
     setMensagem("");
   }
@@ -189,229 +185,188 @@ function SalesHistory() {
     setEditDataVenda("");
     setEditTextoOriginal("");
     setEditValorTotal("");
-    setEditItens([]);
-    setEditBuscaProduto("");
-    setEditProdutoSelecionado(null);
-    setEditQuantidade(1);
-  }
-
-  function selecionarProdutoEdicao(produto) {
-    setEditProdutoSelecionado(produto);
-    setEditBuscaProduto(produto.nome);
-    setErro("");
-    setMensagem("");
-  }
-
-  function adicionarItemEdicao() {
-    setErro("");
-    setMensagem("");
-
-    if (!editProdutoSelecionado) {
-      setErro("Selecione um produto.");
-      return;
-    }
-
-    const quantidadeNumero = Number(editQuantidade);
-
-    if (!quantidadeNumero || quantidadeNumero <= 0) {
-      setErro("Quantidade inválida.");
-      return;
-    }
-
-    const itemExistente = editItens.find(
-      (item) => Number(item.produto_id) === Number(editProdutoSelecionado.id)
-    );
-
-    if (itemExistente) {
-      setEditItens((prev) =>
-        prev.map((item) =>
-          Number(item.produto_id) === Number(editProdutoSelecionado.id)
-            ? { ...item, quantidade: Number(item.quantidade) + quantidadeNumero }
-            : item
-        )
-      );
-    } else {
-      setEditItens((prev) => [
-        ...prev,
-        {
-          produto_id: editProdutoSelecionado.id,
-          nome: editProdutoSelecionado.nome,
-          preco: Number(editProdutoSelecionado.preco),
-          quantidade: quantidadeNumero,
-          foto_produto: editProdutoSelecionado.foto_produto || null,
-        },
-      ]);
-    }
-
-    setEditProdutoSelecionado(null);
-    setEditBuscaProduto("");
-    setEditQuantidade(1);
-  }
-
-  function alterarQuantidadeItemEdicao(produtoId, novaQuantidade) {
-    const quantidadeNumero = Number(novaQuantidade) || 1;
-
-    setEditItens((prev) =>
-      prev.map((item) =>
-        Number(item.produto_id) === Number(produtoId)
-          ? { ...item, quantidade: quantidadeNumero }
-          : item
-      )
-    );
-  }
-
-  function removerItemEdicao(produtoIdRemover) {
-    setEditItens((prev) =>
-      prev.filter((item) => Number(item.produto_id) !== Number(produtoIdRemover))
-    );
   }
 
   async function salvarEdicaoVenda() {
+    if (!vendaEditando) return;
+
     try {
       setErro("");
       setMensagem("");
 
-      if (!vendaEditando) return;
+      if (!editTextoOriginal.trim()) {
+        setErro(
+          "A mensagem original é obrigatória."
+        );
+        return;
+      }
+
+      const valorNumero =
+        Number(editValorTotal);
+
+      if (
+        Number.isNaN(valorNumero) ||
+        valorNumero <= 0
+      ) {
+        setErro(
+          "Informe um valor total válido."
+        );
+        return;
+      }
 
       setSalvandoEdicao(true);
 
-      if (vendaEditando.origem === "manual") {
-        if (editItens.length === 0) {
-          setErro("Adicione pelo menos um item à venda.");
-          setSalvandoEdicao(false);
-          return;
+      await api.put(
+        `/sales/${vendaEditando.id}`,
+        {
+          cliente_nome:
+            editClienteNome.trim() || null,
+
+          data_venda:
+            editDataVenda,
+
+          mensagem_original:
+            editTextoOriginal,
+
+          valor_total:
+            valorNumero,
         }
+      );
 
-        await api.put(`/sales/${vendaEditando.id}`, {
-          cliente_nome: editClienteNome,
-          data_venda: editDataVenda,
-          itens: editItens.map((item) => ({
-            produto_id: item.produto_id,
-            quantidade: item.quantidade,
-          })),
-        });
-      } else {
-        if (!editTextoOriginal.trim()) {
-          setErro("A mensagem original é obrigatória.");
-          setSalvandoEdicao(false);
-          return;
-        }
-
-        if (!Number(editValorTotal) || Number(editValorTotal) <= 0) {
-          setErro("Informe um valor total válido.");
-          setSalvandoEdicao(false);
-          return;
-        }
-
-        await api.put(`/sales/${vendaEditando.id}`, {
-          cliente_nome: editClienteNome,
-          data_venda: editDataVenda,
-          mensagem_original: editTextoOriginal,
-          valor_total: Number(editValorTotal),
-        });
-      }
-
-      setMensagem("Venda atualizada com sucesso.");
       fecharEdicao();
+
+      setMensagem(
+        "Venda atualizada com sucesso."
+      );
+
       await carregarHistorico();
     } catch (error) {
-      setErro(error.response?.data?.message || "Erro ao atualizar venda.");
+      console.error(
+        "Erro ao atualizar venda:",
+        error
+      );
+
+      setErro(
+        error.response?.data?.message ||
+          "Erro ao atualizar venda."
+      );
     } finally {
       setSalvandoEdicao(false);
     }
   }
 
   function montarHtmlPedido(venda) {
-    const nomeCliente = venda.cliente_nome || "Cliente não informado";
-    const total = Number(venda.valor_total || 0);
+    const nomeCliente =
+      venda.cliente_nome ||
+      "Cliente não informado";
 
-    if (venda.origem === "ia") {
-      return `
-        <section class="pedido">
-          <div class="cliente-topo">${escaparHtml(nomeCliente)}</div>
-          <h1>PEDIDO - ${gerarNumeroPedido(venda)}</h1>
+    const total =
+      Number(venda.valor_total || 0);
 
-          <h2>Pedido do catálogo</h2>
-          <pre>${escaparHtml(venda.texto_original || "Mensagem não disponível.")}</pre>
+    const dataVenda =
+      formatarDataExibicao(
+        venda.data_venda ||
+          venda.data_criacao
+      );
 
-          <div class="totais">
-            <p class="total">Total: ${formatarMoeda(total)}</p>
-          </div>
-
-          <h2>Cliente</h2>
-          <p>Nome: ${escaparHtml(nomeCliente)}</p>
-        </section>
-      `;
-    }
-
-    const itens = venda.itens || [];
-
-    const subtotal = itens.reduce((acc, item) => {
-      return acc + Number(item.subtotal || 0);
-    }, 0);
-
-    const produtosHtml =
-      itens.length > 0
-        ? itens
-            .map((item) => {
-              const quantidade = Number(item.quantidade || 1);
-              const nome = escaparHtml(item.produto_nome || "Produto");
-              const valorItem =
-                Number(item.subtotal) ||
-                Number(item.preco_unitario || 0) * quantidade;
-
-              return `<p>${quantidade}x ${nome} = ${formatarMoeda(valorItem)}</p>`;
-            })
-            .join("")
-        : `<p>Produtos não disponíveis.</p>`;
+    const vendedor =
+      venda.usuario_nome ||
+      "Não informado";
 
     return `
       <section class="pedido">
-        <div class="cliente-topo">${escaparHtml(nomeCliente)}</div>
-        <h1>PEDIDO - ${gerarNumeroPedido(venda)}</h1>
 
-        <h2>Produtos</h2>
-        ${produtosHtml}
-
-        <div class="totais">
-          <p>Subtotal: ${formatarMoeda(subtotal || total)}</p>
-          <p class="total">Total: ${formatarMoeda(total)}</p>
+        <div class="cliente-topo">
+          ${escaparHtml(nomeCliente)}
         </div>
 
-        <h2>Cliente</h2>
-        <p>Nome: ${escaparHtml(nomeCliente)}</p>
+        <h1>
+          PEDIDO - ${gerarNumeroPedido(venda)}
+        </h1>
+
+        <div class="informacoes">
+          <p>
+            <strong>Data:</strong>
+            ${escaparHtml(dataVenda)}
+          </p>
+
+          <p>
+            <strong>Vendedor:</strong>
+            ${escaparHtml(vendedor)}
+          </p>
+        </div>
+
+        <h2>Pedido</h2>
+
+        <pre>${
+          escaparHtml(
+            venda.texto_original ||
+              "Mensagem não disponível."
+          )
+        }</pre>
+
+        <div class="totais">
+          <p class="total">
+            Total:
+            ${formatarMoeda(total)}
+          </p>
+        </div>
+
       </section>
     `;
   }
 
   function imprimirVendas(listaVendas) {
-    if (!listaVendas || listaVendas.length === 0) {
-      setErro("Nenhuma venda para exportar.");
+    if (
+      !listaVendas ||
+      listaVendas.length === 0
+    ) {
+      setErro(
+        "Nenhuma venda para exportar."
+      );
       return;
     }
 
-    const conteudo = listaVendas.map(montarHtmlPedido).join("");
-    const janela = window.open("", "_blank");
+    const conteudo =
+      listaVendas
+        .map(montarHtmlPedido)
+        .join("");
+
+    const janela =
+      window.open("", "_blank");
 
     if (!janela) {
-      setErro("Não foi possível abrir a janela de impressão.");
+      setErro(
+        "Não foi possível abrir a janela de impressão."
+      );
       return;
     }
 
     janela.document.write(`
       <!DOCTYPE html>
+
       <html>
         <head>
           <title>Pedidos</title>
+
           <style>
-            * { box-sizing: border-box; }
+
+            * {
+              box-sizing: border-box;
+            }
+
             body {
-              font-family: Arial, sans-serif;
+              font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
               color: #111;
               margin: 0;
               padding: 32px;
               background: #fff;
             }
+
             .pedido {
               width: 100%;
               max-width: 720px;
@@ -419,7 +374,11 @@ function SalesHistory() {
               padding-bottom: 36px;
               page-break-after: always;
             }
-            .pedido:last-child { page-break-after: auto; }
+
+            .pedido:last-child {
+              page-break-after: auto;
+            }
+
             .cliente-topo {
               font-size: 34px;
               line-height: 1.1;
@@ -429,51 +388,90 @@ function SalesHistory() {
               color: #111;
               word-break: break-word;
             }
+
             h1 {
               font-size: 20px;
-              margin: 0 0 24px;
+              margin: 0 0 20px;
               font-weight: 800;
               color: #444;
             }
+
             h2 {
               font-size: 17px;
               margin: 22px 0 10px;
               font-weight: 800;
             }
+
             p {
               font-size: 15px;
               line-height: 1.5;
-              margin: 4px 0;
+              margin: 5px 0;
             }
+
+            .informacoes {
+              margin-bottom: 22px;
+            }
+
             pre {
-              font-family: Arial, sans-serif;
+              font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
               white-space: pre-wrap;
               word-break: break-word;
+
               background: #f5f5f5;
+
               border-radius: 12px;
+
               padding: 14px;
+
               font-size: 14px;
-              line-height: 1.5;
+
+              line-height: 1.6;
+
+              border:
+                1px solid #e6e6e6;
             }
-            .totais { margin-top: 18px; }
+
+            .totais {
+              margin-top: 18px;
+            }
+
             .total {
-              font-weight: 800;
-              font-size: 17px;
+              font-weight: 900;
+              font-size: 20px;
               margin-top: 8px;
             }
+
             @media print {
-              body { padding: 24px; }
-              .cliente-topo { font-size: 32px; }
+
+              body {
+                padding: 24px;
+              }
+
+              .cliente-topo {
+                font-size: 30px;
+              }
+
             }
+
           </style>
         </head>
+
         <body>
+
           ${conteudo}
+
           <script>
+
             window.onload = function () {
               window.print();
             };
+
           </script>
+
         </body>
       </html>
     `);
@@ -489,428 +487,651 @@ function SalesHistory() {
     imprimirVendas(vendas);
   }
 
-  if (loading) {
-    return <p>Carregando histórico...</p>;
-  }
-
   return (
     <div style={styles.page}>
-      <header style={styles.pageHeader(isMobile)}>
+
+      <header
+        style={styles.pageHeader(isMobile)}
+      >
+
         <div>
-          <p style={styles.pageMini}>Vendas</p>
-          <h1 style={styles.pageTitle(isMobile)}>Histórico</h1>
-          <p style={styles.pageSubtitle}>
-            Visualize, edite, exporte e acompanhe as vendas registradas.
+
+          <p style={styles.pageMini}>
+            Vendas
           </p>
+
+          <h1
+            style={styles.pageTitle(
+              isMobile
+            )}
+          >
+            Histórico
+          </h1>
+
+          <p style={styles.pageSubtitle}>
+            Pesquise, edite e acompanhe
+            todas as vendas registradas.
+          </p>
+
         </div>
 
         <div style={styles.headerActions}>
+
           <div style={styles.totalBadge}>
-            {vendas.length} {vendas.length === 1 ? "venda" : "vendas"}
+            {vendas.length}{" "}
+            {vendas.length === 1
+              ? "venda"
+              : "vendas"}
           </div>
 
-          <button onClick={exportarTodasVendasPdf} style={styles.exportButton}>
+          <button
+            type="button"
+            onClick={
+              exportarTodasVendasPdf
+            }
+            style={styles.exportButton}
+          >
             Exportar PDF
           </button>
+
         </div>
+
       </header>
 
-      {erro && <p style={styles.erro}>{erro}</p>}
-      {mensagem && <p style={styles.sucesso}>{mensagem}</p>}
+      {erro && (
+        <div style={styles.alertError}>
+          {erro}
+        </div>
+      )}
+
+      {mensagem && (
+        <div style={styles.alertSuccess}>
+          {mensagem}
+        </div>
+      )}
 
       <section style={styles.tableCard}>
-        <form onSubmit={handleBuscar} style={styles.toolbar(isMobile)}>
-          <div style={styles.searchBox(isMobile)}>
-            <span style={styles.searchIcon}>⌕</span>
+
+        <form
+          onSubmit={handleBuscar}
+          style={styles.toolbar(
+            isMobile
+          )}
+        >
+
+          <div style={styles.searchBox}>
+
+            <span
+              style={styles.searchIcon}
+            >
+              ⌕
+            </span>
+
             <input
               type="text"
               placeholder="Buscar por nome do cliente..."
               value={clienteBusca}
-              onChange={(e) => setClienteBusca(e.target.value)}
+              onChange={(e) =>
+                setClienteBusca(
+                  e.target.value
+                )
+              }
               style={styles.searchInput}
             />
+
           </div>
 
-          <div style={styles.dateBox(isMobile)}>
+          <div style={styles.dateBox}>
+
             <input
               type="date"
               value={dataBusca}
-              onChange={(e) => setDataBusca(e.target.value)}
+              onChange={(e) =>
+                setDataBusca(
+                  e.target.value
+                )
+              }
               style={styles.dateInput}
             />
+
           </div>
 
-          <button type="submit" style={styles.searchButton(isMobile)}>
+          <button
+            type="submit"
+            style={styles.searchButton}
+          >
             Buscar
           </button>
 
-          <button type="button" onClick={limparFiltros} style={styles.clearButton(isMobile)}>
+          <button
+            type="button"
+            onClick={limparFiltros}
+            style={styles.clearButton}
+          >
             Limpar
           </button>
+
         </form>
 
-        <div style={styles.tableViewport(isMobile)}>
-          {vendas.length === 0 ? (
+        <div
+          style={styles.listViewport(
+            isMobile
+          )}
+        >
+
+          {loading ? (
+
             <div style={styles.emptyBox}>
-              <p style={styles.emptyTitle}>Nenhuma venda encontrada</p>
-              <p style={styles.emptyText}>Tente mudar o filtro ou registre novas vendas.</p>
+              <p style={styles.emptyTitle}>
+                Carregando histórico...
+              </p>
             </div>
+
+          ) : vendas.length === 0 ? (
+
+            <div style={styles.emptyBox}>
+
+              <p style={styles.emptyTitle}>
+                Nenhuma venda encontrada
+              </p>
+
+              <p style={styles.emptyText}>
+                Tente alterar os filtros
+                ou registre uma nova venda.
+              </p>
+
+            </div>
+
           ) : (
+
             <div style={styles.rows}>
+
               {vendas.map((venda) => (
-                <div key={venda.id} style={styles.rowCard(isMobile)}>
-                  <div style={styles.rowMain}>
-                    <div>
-                      <p style={styles.rowName}>
-                        {venda.cliente_nome || "Cliente não informado"}
-                      </p>
 
-                      <p style={styles.rowDate}>Vendedor: {venda.usuario_nome}</p>
+                <article
+                  key={venda.id}
+                  style={styles.saleCard(
+                    isMobile
+                  )}
+                >
 
-                      <p style={styles.rowDate}>
-                        Data da venda:{" "}
-                        {venda.data_venda
-                          ? new Date(venda.data_venda).toLocaleDateString("pt-BR")
-                          : new Date(venda.data_criacao).toLocaleDateString("pt-BR")}
-                      </p>
+                  <div
+                    style={styles.saleHeader(
+                      isMobile
+                    )}
+                  >
+
+                    <div
+                      style={
+                        styles.saleIdentity
+                      }
+                    >
+
+                      <div
+                        style={
+                          styles.orderNumber
+                        }
+                      >
+                        #
+                        {gerarNumeroPedido(
+                          venda
+                        )}
+                      </div>
+
+                      <div>
+
+                        <h3
+                          style={
+                            styles.clientName
+                          }
+                        >
+                          {venda.cliente_nome ||
+                            "Cliente não informado"}
+                        </h3>
+
+                        <p
+                          style={
+                            styles.saleMeta
+                          }
+                        >
+                          Vendedor:{" "}
+                          {venda.usuario_nome ||
+                            "Não informado"}
+                        </p>
+
+                        <p
+                          style={
+                            styles.saleMeta
+                          }
+                        >
+                          Data:{" "}
+                          {formatarDataExibicao(
+                            venda.data_venda ||
+                              venda.data_criacao
+                          )}
+                        </p>
+
+                      </div>
+
                     </div>
 
-                    <div style={styles.badgeGroup}>
+                    <div
+                      style={
+                        styles.saleTotalBox
+                      }
+                    >
+
                       <span
-                        style={{
-                          ...styles.originBadge,
-                          ...(venda.origem === "ia"
-                            ? styles.originIA
-                            : styles.originManual),
-                        }}
+                        style={
+                          styles.totalLabel
+                        }
                       >
-                        {venda.origem === "ia" ? "Venda Catálogo" : "Venda Manual"}
+                        Total
                       </span>
 
-                      <button onClick={() => abrirEdicao(venda)} style={styles.editButton}>
+                      <strong
+                        style={
+                          styles.totalValue
+                        }
+                      >
+                        {formatarMoeda(
+                          venda.valor_total
+                        )}
+                      </strong>
+
+                    </div>
+
+                  </div>
+
+                  <div
+                    style={
+                      styles.messageBox
+                    }
+                  >
+
+                    <span
+                      style={
+                        styles.messageLabel
+                      }
+                    >
+                      Pedido
+                    </span>
+
+                    <p
+                      style={
+                        styles.messageText
+                      }
+                    >
+                      {venda.texto_original ||
+                        "Mensagem não disponível."}
+                    </p>
+
+                  </div>
+
+                  <div
+                    style={styles.saleFooter(
+                      isMobile
+                    )}
+                  >
+
+                    <div
+                      style={
+                        styles.saleStatus
+                      }
+                    >
+
+                      <span
+                        style={
+                          styles.statusBadge
+                        }
+                      >
+                        Venda registrada
+                      </span>
+
+                      {venda.editada && (
+                        <span
+                          style={
+                            styles.editedBadge
+                          }
+                        >
+                          Editada
+                        </span>
+                      )}
+
+                    </div>
+
+                    <div
+                      style={
+                        styles.actionGroup
+                      }
+                    >
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          abrirEdicao(venda)
+                        }
+                        style={
+                          styles.editButton
+                        }
+                      >
                         Editar
                       </button>
 
-                      <button onClick={() => exportarVendaPdf(venda)} style={styles.pdfButton}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          exportarVendaPdf(
+                            venda
+                          )
+                        }
+                        style={
+                          styles.pdfButton
+                        }
+                      >
                         PDF
                       </button>
 
-                      <button onClick={() => excluirVenda(venda.id)} style={styles.deleteButton}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          excluirVenda(
+                            venda.id
+                          )
+                        }
+                        style={
+                          styles.deleteButton
+                        }
+                      >
                         Excluir
                       </button>
+
                     </div>
+
                   </div>
 
-                  <div style={styles.rowMiddle(isMobile)}>
-                    <div style={styles.infoBlock}>
-                      <span style={styles.infoLabel}>Total</span>
-                      <strong style={styles.infoValue}>
-                        {formatarMoeda(venda.valor_total)}
-                      </strong>
-                    </div>
+                </article>
 
-                    <div style={styles.infoBlock}>
-                      <span style={styles.infoLabel}>Editada</span>
-                      <strong style={styles.infoValue}>{venda.editada ? "Sim" : "Não"}</strong>
-                    </div>
-
-                    <div style={styles.infoBlock}>
-                      <span style={styles.infoLabel}>Criada em</span>
-                      <strong style={styles.infoValueSmall}>
-                        {new Date(venda.data_criacao).toLocaleString("pt-BR")}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {venda.itens?.length > 0 && (
-                    <div style={styles.itemsBox}>
-                      <span style={styles.messageLabel}>Produtos</span>
-                      {venda.itens.map((item) => (
-                        <p key={item.id} style={styles.itemText}>
-                          {item.quantidade}x {item.produto_nome} ={" "}
-                          {formatarMoeda(item.subtotal)}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-
-                  {venda.texto_original && (
-                    <div style={styles.messageBox}>
-                      <span style={styles.messageLabel}>Mensagem original</span>
-                      <p style={styles.messageText}>{venda.texto_original}</p>
-                    </div>
-                  )}
-                </div>
               ))}
+
             </div>
+
           )}
+
         </div>
+
       </section>
 
       {vendaEditando && (
+
         <div style={styles.overlay}>
-          <div style={styles.modal}>
-            <div style={styles.modalHeader}>
+
+          <div
+            style={styles.modal(
+              isMobile
+            )}
+          >
+
+            <div
+              style={
+                styles.modalHeader
+              }
+            >
+
               <div>
-                <p style={styles.pageMini}>Editar venda</p>
-                <h2 style={styles.modalTitle}>Pedido {gerarNumeroPedido(vendaEditando)}</h2>
+
+                <p
+                  style={
+                    styles.pageMini
+                  }
+                >
+                  Editar venda
+                </p>
+
+                <h2
+                  style={
+                    styles.modalTitle
+                  }
+                >
+                  Pedido{" "}
+                  {gerarNumeroPedido(
+                    vendaEditando
+                  )}
+                </h2>
+
               </div>
 
-              <button onClick={fecharEdicao} style={styles.closeButton}>
+              <button
+                type="button"
+                onClick={fecharEdicao}
+                style={
+                  styles.closeButton
+                }
+              >
                 Fechar
               </button>
+
             </div>
 
-            <div style={styles.editGrid(isMobile)}>
-              <aside style={styles.editSidebar}>
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>Nome do cliente</label>
+            <div
+              style={styles.modalGrid(
+                isMobile
+              )}
+            >
+
+              <div>
+
+                <div
+                  style={
+                    styles.fieldGroup
+                  }
+                >
+
+                  <label
+                    style={
+                      styles.label
+                    }
+                  >
+                    Nome do cliente
+                  </label>
+
                   <input
                     type="text"
-                    value={editClienteNome}
-                    onChange={(e) => setEditClienteNome(e.target.value)}
-                    placeholder="Ex: João Silva"
-                    style={styles.input}
+                    value={
+                      editClienteNome
+                    }
+                    onChange={(e) =>
+                      setEditClienteNome(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Nome do cliente"
+                    style={
+                      styles.input
+                    }
                   />
+
                 </div>
 
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>Data da venda</label>
+                <div
+                  style={
+                    styles.fieldGroup
+                  }
+                >
+
+                  <label
+                    style={
+                      styles.label
+                    }
+                  >
+                    Data da venda
+                  </label>
+
                   <input
                     type="date"
-                    value={editDataVenda}
-                    onChange={(e) => setEditDataVenda(e.target.value)}
-                    style={styles.input}
+                    value={
+                      editDataVenda
+                    }
+                    onChange={(e) =>
+                      setEditDataVenda(
+                        e.target.value
+                      )
+                    }
+                    style={
+                      styles.input
+                    }
                   />
+
                 </div>
 
-                                {vendaEditando.origem === "ia" ? (
-                  <>
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>Valor total</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={editValorTotal}
-                        onChange={(e) => setEditValorTotal(e.target.value)}
-                        style={styles.input}
-                      />
-                    </div>
+                <div
+                  style={
+                    styles.fieldGroup
+                  }
+                >
 
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>Mensagem original</label>
-                      <textarea
-                        value={editTextoOriginal}
-                        onChange={(e) => setEditTextoOriginal(e.target.value)}
-                        style={styles.editTextarea}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>Buscar produto</label>
-                      <input
-                        type="text"
-                        value={editBuscaProduto}
-                        onChange={(e) => {
-                          setEditBuscaProduto(e.target.value);
-                          setEditProdutoSelecionado(null);
-                        }}
-                        placeholder={
-                          loadingProdutos
-                            ? "Carregando produtos..."
-                            : "Digite o nome do produto..."
-                        }
-                        disabled={loadingProdutos}
-                        style={styles.input}
-                      />
+                  <label
+                    style={
+                      styles.label
+                    }
+                  >
+                    Valor da venda
+                  </label>
 
-                      {editBuscaProduto && (
-                        <div style={styles.productSearchList}>
-                          {produtosFiltrados.length === 0 ? (
-                            <p style={styles.noProducts}>
-                              Nenhum produto encontrado.
-                            </p>
-                          ) : (
-                            produtosFiltrados.map((produto) => {
-                              const fotoUrl = getImageUrl(produto.foto_produto);
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={
+                      editValorTotal
+                    }
+                    onChange={(e) =>
+                      setEditValorTotal(
+                        e.target.value
+                      )
+                    }
+                    style={
+                      styles.input
+                    }
+                  />
 
-                              return (
-                                <button
-                                  key={produto.id}
-                                  type="button"
-                                  onClick={() => selecionarProdutoEdicao(produto)}
-                                  style={{
-                                    ...styles.productOption,
-                                    ...(editProdutoSelecionado?.id === produto.id
-                                      ? styles.productOptionActive
-                                      : {}),
-                                  }}
-                                >
-                                  {fotoUrl ? (
-                                    <img
-                                      src={fotoUrl}
-                                      alt={produto.nome}
-                                      style={styles.productOptionImage}
-                                    />
-                                  ) : (
-                                    <div style={styles.productOptionImageEmpty}>
-                                      IMG
-                                    </div>
-                                  )}
+                </div>
 
-                                  <div style={styles.productOptionInfo}>
-                                    <strong style={styles.productOptionName}>
-                                      {produto.nome}
-                                    </strong>
-                                    <span style={styles.productOptionPrice}>
-                                      {formatarMoeda(produto.preco)}
-                                    </span>
-                                  </div>
-                                </button>
-                              );
-                            })
-                          )}
-                        </div>
-                      )}
-                    </div>
+                <div
+                  style={
+                    styles.summaryCard
+                  }
+                >
 
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>Quantidade</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={editQuantidade}
-                        onChange={(e) => setEditQuantidade(e.target.value)}
-                        style={styles.input}
-                      />
-                    </div>
-
-                    <button onClick={adicionarItemEdicao} style={styles.primaryButton}>
-                      Adicionar item
-                    </button>
-                  </>
-                )}
-
-                <div style={styles.editSummary}>
-                  <p style={styles.darkMini}>Resumo</p>
-                  <h3 style={styles.darkBig}>{formatarMoeda(totalEdicao)}</h3>
-                  <p style={styles.darkText}>
-                    {vendaEditando.origem === "ia"
-                      ? "Venda do catálogo por texto"
-                      : `${editItens.length} ${
-                          editItens.length === 1 ? "item" : "itens"
-                        } na venda`}
+                  <p
+                    style={
+                      styles.summaryMini
+                    }
+                  >
+                    Valor registrado
                   </p>
 
-                  <button
-                    onClick={salvarEdicaoVenda}
-                    disabled={salvandoEdicao}
-                    style={styles.darkButton}
+                  <h3
+                    style={
+                      styles.summaryValue
+                    }
                   >
-                    {salvandoEdicao ? "Salvando..." : "Salvar alterações"}
-                  </button>
+                    {formatarMoeda(
+                      editValorTotal
+                    )}
+                  </h3>
+
+                  <p
+                    style={
+                      styles.summaryText
+                    }
+                  >
+                    Esse valor será usado
+                    no dashboard, ranking e
+                    desempenho da equipe.
+                  </p>
+
                 </div>
-              </aside>
 
-              <div style={styles.editContent}>
-                <h3 style={styles.contentTitle}>
-                  {vendaEditando.origem === "ia"
-                    ? "Pedido do catálogo"
-                    : "Itens da venda"}
-                </h3>
-
-                <div style={styles.editItemsViewport}>
-                  {vendaEditando.origem === "ia" ? (
-                    <div style={styles.messageBox}>
-                      <span style={styles.messageLabel}>Mensagem original</span>
-                      <p style={styles.messageText}>
-                        {editTextoOriginal || "Mensagem não informada."}
-                      </p>
-                    </div>
-                  ) : editItens.length === 0 ? (
-                    <div style={styles.emptyBox}>
-                      <p style={styles.emptyTitle}>Nenhum item adicionado</p>
-                      <p style={styles.emptyText}>
-                        Busque um produto e monte a venda.
-                      </p>
-                    </div>
-                  ) : (
-                    <div style={styles.editItemsList}>
-                      {editItens.map((item) => {
-                        const fotoUrl = getImageUrl(item.foto_produto);
-
-                        return (
-                          <div
-                            key={item.produto_id}
-                            style={styles.editItemCard(isMobile)}
-                          >
-                            <div style={styles.editItemLeft}>
-                              <div style={styles.itemImageBox}>
-                                {fotoUrl ? (
-                                  <img
-                                    src={fotoUrl}
-                                    alt={item.nome}
-                                    style={styles.itemImage}
-                                  />
-                                ) : (
-                                  <div style={styles.itemImagePlaceholder}>
-                                    Sem imagem
-                                  </div>
-                                )}
-                              </div>
-
-                              <div style={styles.editItemInfo}>
-                                <h3 style={styles.editItemName}>{item.nome}</h3>
-                                <p style={styles.itemText}>
-                                  {formatarMoeda(item.preco)} por unidade
-                                </p>
-                              </div>
-                            </div>
-
-                            <div style={styles.editItemRight(isMobile)}>
-                              <div style={styles.qtyEditBox}>
-                                <label style={styles.infoLabel}>Qtd.</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={item.quantidade}
-                                  onChange={(e) =>
-                                    alterarQuantidadeItemEdicao(
-                                      item.produto_id,
-                                      e.target.value
-                                    )
-                                  }
-                                  style={styles.qtyInput}
-                                />
-                              </div>
-
-                              <div style={styles.infoBlock}>
-                                <span style={styles.infoLabel}>Subtotal</span>
-                                <strong style={styles.infoValue}>
-                                  {formatarMoeda(item.preco * item.quantidade)}
-                                </strong>
-                              </div>
-
-                              <button
-                                onClick={() => removerItemEdicao(item.produto_id)}
-                                style={styles.removeButton(isMobile)}
-                              >
-                                Remover
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
               </div>
+
+              <div
+                style={
+                  styles.messageEditor
+                }
+              >
+
+                <label
+                  style={
+                    styles.label
+                  }
+                >
+                  Mensagem original
+                </label>
+
+                <textarea
+                  value={
+                    editTextoOriginal
+                  }
+                  onChange={(e) =>
+                    setEditTextoOriginal(
+                      e.target.value
+                    )
+                  }
+                  style={
+                    styles.textarea
+                  }
+                />
+
+              </div>
+
             </div>
+
+            <div
+              style={
+                styles.modalActions
+              }
+            >
+
+              <button
+                type="button"
+                onClick={fecharEdicao}
+                style={
+                  styles.cancelButton
+                }
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  salvarEdicaoVenda
+                }
+                disabled={
+                  salvandoEdicao
+                }
+                style={{
+                  ...styles.saveButton,
+
+                  ...(salvandoEdicao
+                    ? styles.disabledButton
+                    : {}),
+                }}
+              >
+                {salvandoEdicao
+                  ? "Salvando..."
+                  : "Salvar alterações"}
+              </button>
+
+            </div>
+
           </div>
+
         </div>
+
       )}
+
     </div>
   );
 }
@@ -921,637 +1142,617 @@ const styles = {
     minHeight: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: 20,
   },
+
   pageHeader: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: isMobile ? "flex-start" : "center",
-    flexDirection: isMobile ? "column" : "row",
-    gap: "16px",
+    alignItems: isMobile
+      ? "flex-start"
+      : "center",
+    flexDirection: isMobile
+      ? "column"
+      : "row",
+    gap: 16,
     flexWrap: "wrap",
   }),
+
   pageMini: {
-    fontSize: "12px",
+    fontSize: 12,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
     color: "#7b7b7b",
     fontWeight: 700,
-    marginBottom: "6px",
+    marginBottom: 6,
   },
+
   pageTitle: (isMobile) => ({
-    fontSize: isMobile ? "28px" : "34px",
+    fontSize: isMobile
+      ? 28
+      : 34,
     fontWeight: 900,
     letterSpacing: "-0.05em",
     color: "#111",
   }),
+
   pageSubtitle: {
     color: "#666",
-    fontSize: "15px",
-    marginTop: "6px",
+    fontSize: 15,
+    marginTop: 6,
     lineHeight: 1.6,
   },
+
   headerActions: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: 10,
     flexWrap: "wrap",
   },
+
   totalBadge: {
-    padding: "12px 16px",
-    borderRadius: "999px",
-    background: "rgba(31,79,163,0.10)",
+    padding: "11px 15px",
+    borderRadius: 999,
+    background:
+      "rgba(31,79,163,0.10)",
     color: "#1f4fa3",
-    fontSize: "13px",
+    fontSize: 13,
     fontWeight: 800,
   },
+
   exportButton: {
-    height: "42px",
+    height: 42,
     padding: "0 16px",
-    borderRadius: "999px",
+    borderRadius: 999,
     border: "none",
     background: "#111",
     color: "#fff",
-    fontSize: "13px",
+    fontSize: 13,
     fontWeight: 800,
     cursor: "pointer",
   },
-  erro: {
+
+  alertError: {
+    background:
+      "rgba(176,0,32,0.08)",
     color: "#b00020",
-    fontWeight: 600,
+    border:
+      "1px solid rgba(176,0,32,0.12)",
+    borderRadius: 14,
+    padding: "12px 14px",
+    fontWeight: 700,
+    fontSize: 14,
   },
-  sucesso: {
+
+  alertSuccess: {
+    background:
+      "rgba(10,125,50,0.08)",
     color: "#0a7d32",
-    fontWeight: 600,
+    border:
+      "1px solid rgba(10,125,50,0.12)",
+    borderRadius: 14,
+    padding: "12px 14px",
+    fontWeight: 700,
+    fontSize: 14,
   },
+
   tableCard: {
     background: "#fff",
-    borderRadius: "24px",
-    padding: "22px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+    borderRadius: 24,
+    padding: 22,
+    boxShadow:
+      "0 6px 18px rgba(0,0,0,0.05)",
     display: "flex",
     flexDirection: "column",
-    gap: "18px",
-    height: "calc(100vh - 210px)",
-    minHeight: "520px",
-    overflow: "hidden",
+    gap: 18,
+    minHeight: 520,
   },
+
   toolbar: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "1.4fr 220px auto auto",
+    gridTemplateColumns:
+      isMobile
+        ? "1fr"
+        : "1.4fr 220px auto auto",
     alignItems: "center",
-    gap: "12px",
-    flexShrink: 0,
+    gap: 12,
   }),
-  searchBox: () => ({
+
+  searchBox: {
     width: "100%",
-    height: "52px",
+    height: 52,
     background: "#f5f2ec",
-    borderRadius: "16px",
+    borderRadius: 16,
     display: "grid",
-    gridTemplateColumns: "24px 1fr",
+    gridTemplateColumns:
+      "24px 1fr",
     alignItems: "center",
-    gap: "10px",
+    gap: 10,
     padding: "0 14px",
-    border: "1px solid #ece5da",
-  }),
+    border:
+      "1px solid #ece5da",
+  },
+
   searchIcon: {
-    fontSize: "18px",
+    fontSize: 18,
     color: "#7b7b7b",
     textAlign: "center",
   },
+
   searchInput: {
     height: "100%",
     border: "none",
     outline: "none",
     background: "transparent",
-    fontSize: "14px",
+    fontSize: 14,
     color: "#111",
+    minWidth: 0,
   },
-  dateBox: () => ({
+
+  dateBox: {
     width: "100%",
-    height: "52px",
+    height: 52,
     background: "#f5f2ec",
-    borderRadius: "16px",
+    borderRadius: 16,
     display: "flex",
     alignItems: "center",
     padding: "0 14px",
-    border: "1px solid #ece5da",
-  }),
+    border:
+      "1px solid #ece5da",
+  },
+
   dateInput: {
     width: "100%",
     border: "none",
     outline: "none",
     background: "transparent",
     color: "#111",
-    fontSize: "14px",
+    fontSize: 14,
   },
-  searchButton: (isMobile) => ({
-    height: "52px",
+
+  searchButton: {
+    height: 52,
     padding: "0 20px",
-    borderRadius: "14px",
+    borderRadius: 14,
     border: "none",
     background: "#111",
     color: "#fff",
     fontWeight: 800,
     cursor: "pointer",
-    width: isMobile ? "100%" : "auto",
-  }),
-  clearButton: (isMobile) => ({
-    height: "52px",
+  },
+
+  clearButton: {
+    height: 52,
     padding: "0 20px",
-    borderRadius: "14px",
+    borderRadius: 14,
     border: "1px solid #ddd",
     background: "#fff",
     color: "#111",
     fontWeight: 800,
     cursor: "pointer",
-    width: isMobile ? "100%" : "auto",
+  },
+
+  listViewport: (isMobile) => ({
+    maxHeight: isMobile
+      ? "none"
+      : "calc(100vh - 350px)",
+    overflowY: isMobile
+      ? "visible"
+      : "auto",
+    paddingRight: isMobile
+      ? 0
+      : 4,
   }),
-  tableViewport: () => ({
-    minHeight: 0,
-    overflowY: "auto",
-    paddingRight: "4px",
-  }),
+
   rows: {
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: 14,
   },
-  rowCard: () => ({
+
+  saleCard: (isMobile) => ({
     background: "#f8f6f2",
-    borderRadius: "20px",
-    padding: "18px",
-    border: "1px solid #eee8df",
+    borderRadius: 20,
+    padding: isMobile
+      ? 15
+      : 18,
+    border:
+      "1px solid #eee8df",
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: 15,
   }),
-  rowMain: {
+
+  saleHeader: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "12px",
-    flexWrap: "wrap",
-  },
-  rowName: {
-    fontSize: "20px",
-    fontWeight: 800,
-    color: "#111",
-    marginBottom: "4px",
-  },
-  rowDate: {
-    color: "#777",
-    fontSize: "13px",
-    marginTop: "4px",
-  },
-  badgeGroup: {
-    display: "flex",
-    gap: "10px",
-    flexWrap: "wrap",
-    alignItems: "center",
-  },
-  originBadge: {
-    padding: "10px 14px",
-    borderRadius: "999px",
-    fontSize: "12px",
-    fontWeight: 800,
-  },
-  originIA: {
-    background: "rgba(31,79,163,0.10)",
-    color: "#1f4fa3",
-  },
-  originManual: {
-    background: "rgba(201,31,40,0.10)",
-    color: "#c91f28",
-  },
-  editButton: {
-    padding: "10px 14px",
-    borderRadius: "999px",
-    border: "none",
-    background: "rgba(17,17,17,0.10)",
-    color: "#111",
-    fontSize: "12px",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  pdfButton: {
-    padding: "10px 14px",
-    borderRadius: "999px",
-    border: "none",
-    background: "rgba(31,79,163,0.10)",
-    color: "#1f4fa3",
-    fontSize: "12px",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  deleteButton: {
-    padding: "10px 14px",
-    borderRadius: "999px",
-    border: "none",
-    background: "rgba(176, 0, 32, 0.10)",
-    color: "#b00020",
-    fontSize: "12px",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  rowMiddle: (isMobile) => ({
-    display: "flex",
-    gap: "20px",
-    flexWrap: "wrap",
-    justifyContent: "flex-start",
-    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile
+      ? "stretch"
+      : "flex-start",
+    gap: 16,
+    flexDirection: isMobile
+      ? "column"
+      : "row",
   }),
-  infoBlock: {
+
+  saleIdentity: {
+    display: "flex",
+    gap: 12,
+    alignItems: "flex-start",
+    minWidth: 0,
+  },
+
+  orderNumber: {
+    minWidth: 46,
+    height: 46,
+    padding: "0 8px",
+    borderRadius: 13,
+    background: "#171921",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 10,
+    fontWeight: 900,
+    flexShrink: 0,
+  },
+
+  clientName: {
+    fontSize: 20,
+    fontWeight: 900,
+    color: "#111",
+    letterSpacing:
+      "-0.03em",
+    marginBottom: 4,
+  },
+
+  saleMeta: {
+    color: "#777",
+    fontSize: 13,
+    lineHeight: 1.5,
+  },
+
+  saleTotalBox: {
+    background: "#fff",
+    border:
+      "1px solid #ebe3d8",
+    borderRadius: 16,
+    padding: "11px 14px",
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
-    minWidth: "120px",
+    gap: 4,
+    minWidth: 145,
   },
-  infoLabel: {
-    fontSize: "12px",
+
+  totalLabel: {
+    fontSize: 10,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    color: "#8a8a8a",
-    fontWeight: 700,
-  },
-  infoValue: {
-    fontSize: "18px",
-    color: "#111",
+    color: "#888",
     fontWeight: 800,
   },
-  infoValueSmall: {
-    fontSize: "14px",
+
+  totalValue: {
+    fontSize: 19,
     color: "#111",
-    fontWeight: 800,
+    fontWeight: 900,
+    whiteSpace: "nowrap",
   },
-  itemsBox: {
-    background: "#fff",
-    borderRadius: "16px",
-    padding: "14px",
-    border: "1px solid #ebe3d8",
-  },
-  itemText: {
-    color: "#444",
-    fontSize: "14px",
-    lineHeight: 1.6,
-    marginTop: "4px",
-  },
+
   messageBox: {
     background: "#fff",
-    borderRadius: "16px",
-    padding: "14px",
-    border: "1px solid #ebe3d8",
+    borderRadius: 16,
+    padding: 14,
+    border:
+      "1px solid #ebe3d8",
   },
+
   messageLabel: {
     display: "block",
-    fontSize: "12px",
+    fontSize: 11,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
     color: "#8a8a8a",
-    fontWeight: 700,
-    marginBottom: "8px",
+    fontWeight: 800,
+    marginBottom: 8,
   },
+
   messageText: {
     color: "#444",
-    fontSize: "14px",
+    fontSize: 13,
     lineHeight: 1.7,
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
+    maxHeight: 150,
+    overflowY: "auto",
   },
+
+  saleFooter: (isMobile) => ({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: isMobile
+      ? "stretch"
+      : "center",
+    flexDirection: isMobile
+      ? "column"
+      : "row",
+    gap: 12,
+  }),
+
+  saleStatus: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+
+  statusBadge: {
+    padding: "8px 11px",
+    borderRadius: 999,
+    background:
+      "rgba(31,79,163,0.10)",
+    color: "#1f4fa3",
+    fontSize: 11,
+    fontWeight: 800,
+  },
+
+  editedBadge: {
+    padding: "8px 11px",
+    borderRadius: 999,
+    background:
+      "rgba(241,203,58,0.25)",
+    color: "#6f5700",
+    fontSize: 11,
+    fontWeight: 800,
+  },
+
+  actionGroup: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+
+  editButton: {
+    padding: "10px 14px",
+    borderRadius: 999,
+    border: "none",
+    background:
+      "rgba(17,17,17,0.10)",
+    color: "#111",
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
+  pdfButton: {
+    padding: "10px 14px",
+    borderRadius: 999,
+    border: "none",
+    background:
+      "rgba(31,79,163,0.10)",
+    color: "#1f4fa3",
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
+  deleteButton: {
+    padding: "10px 14px",
+    borderRadius: 999,
+    border: "none",
+    background:
+      "rgba(176,0,32,0.10)",
+    color: "#b00020",
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
   emptyBox: {
-    borderRadius: "20px",
+    borderRadius: 20,
     background: "#f8f6f2",
-    padding: "32px",
+    padding: 32,
     textAlign: "center",
   },
+
   emptyTitle: {
-    fontSize: "22px",
+    fontSize: 20,
     fontWeight: 800,
     color: "#111",
-    marginBottom: "8px",
+    marginBottom: 8,
   },
+
   emptyText: {
     color: "#666",
-    fontSize: "14px",
+    fontSize: 14,
   },
+
   overlay: {
     position: "fixed",
     inset: 0,
     zIndex: 1000,
-    background: "rgba(0,0,0,0.45)",
-    padding: "24px",
+    background:
+      "rgba(0,0,0,0.45)",
+    padding: 20,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
-  modal: {
+
+  modal: (isMobile) => ({
     width: "100%",
-    maxWidth: "1180px",
-    maxHeight: "calc(100vh - 48px)",
+    maxWidth: 920,
+    maxHeight:
+      "calc(100vh - 40px)",
     background: "#fff",
-    borderRadius: "24px",
-    padding: "22px",
-    boxShadow: "0 22px 70px rgba(0,0,0,0.24)",
+    borderRadius: 24,
+    padding: isMobile
+      ? 18
+      : 24,
+    boxShadow:
+      "0 22px 70px rgba(0,0,0,0.24)",
     display: "flex",
     flexDirection: "column",
-    gap: "18px",
-    overflow: "hidden",
-  },
+    gap: 20,
+    overflowY: "auto",
+  }),
+
   modalHeader: {
     display: "flex",
     alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: "16px",
-    flexShrink: 0,
+    justifyContent:
+      "space-between",
+    gap: 16,
   },
+
   modalTitle: {
-    fontSize: "28px",
+    fontSize: 27,
     fontWeight: 900,
     color: "#111",
-    letterSpacing: "-0.04em",
+    letterSpacing:
+      "-0.04em",
   },
+
   closeButton: {
-    height: "42px",
+    height: 42,
     padding: "0 16px",
-    borderRadius: "999px",
-    border: "1px solid #ddd",
+    borderRadius: 999,
+    border:
+      "1px solid #ddd",
     background: "#fff",
     color: "#111",
     fontWeight: 800,
     cursor: "pointer",
   },
-  editGrid: (isMobile) => ({
+
+  modalGrid: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "340px minmax(0, 1fr)",
-    gap: "18px",
-    minHeight: 0,
-    overflow: "hidden",
+    gridTemplateColumns:
+      isMobile
+        ? "1fr"
+        : "300px minmax(0, 1fr)",
+    gap: 18,
   }),
-  editSidebar: {
-    minHeight: 0,
-    overflowY: "auto",
-    paddingRight: "4px",
-  },
-  editContent: {
-    minHeight: 0,
-    background: "#f8f6f2",
-    borderRadius: "22px",
-    border: "1px solid #eee8df",
-    padding: "18px",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-  },
-  contentTitle: {
-    fontSize: "22px",
-    fontWeight: 800,
-    color: "#111",
-    letterSpacing: "-0.03em",
-    marginBottom: "14px",
-    flexShrink: 0,
-  },
+
   fieldGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
-    marginBottom: "14px",
+    gap: 8,
+    marginBottom: 14,
   },
+
   label: {
-    fontSize: "13px",
+    fontSize: 13,
     fontWeight: 700,
     color: "#444",
   },
+
   input: {
-    height: "52px",
-    borderRadius: "14px",
-    border: "1px solid #ddd",
+    width: "100%",
+    height: 52,
+    borderRadius: 14,
+    border:
+      "1px solid #ddd",
     padding: "0 14px",
     background: "#fff",
     color: "#111",
-    fontSize: "14px",
+    fontSize: 14,
     outline: "none",
+    boxSizing: "border-box",
   },
-  editTextarea: {
-    minHeight: "190px",
-    resize: "vertical",
-    borderRadius: "14px",
-    border: "1px solid #ddd",
-    padding: "14px",
-    background: "#fff",
-    color: "#111",
-    fontSize: "14px",
-    lineHeight: 1.6,
-    outline: "none",
-  },
-  productSearchList: {
-    maxHeight: "220px",
-    overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    marginTop: "4px",
-  },
-  productOption: {
-    width: "100%",
-    border: "1px solid #eee8df",
-    background: "#f8f6f2",
-    borderRadius: "16px",
-    padding: "10px",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    cursor: "pointer",
-    textAlign: "left",
-  },
-  productOptionActive: {
-    border: "1px solid #1f4fa3",
-    background: "rgba(31,79,163,0.08)",
-  },
-  productOptionImage: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "12px",
-    objectFit: "cover",
-    flexShrink: 0,
-  },
-  productOptionImageEmpty: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "12px",
-    background: "#ece7df",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#777",
-    fontSize: "10px",
-    fontWeight: 800,
-    flexShrink: 0,
-  },
-  productOptionInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "3px",
-    minWidth: 0,
-  },
-  productOptionName: {
-    fontSize: "13px",
-    color: "#111",
-    fontWeight: 800,
-  },
-  productOptionPrice: {
-    fontSize: "12px",
-    color: "#666",
-  },
-  noProducts: {
-    fontSize: "13px",
-    color: "#777",
-    background: "#f8f6f2",
-    padding: "12px",
-    borderRadius: "14px",
-  },
-  primaryButton: {
-    width: "100%",
-    height: "52px",
-    borderRadius: "14px",
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  editSummary: {
-    marginTop: "18px",
+
+  summaryCard: {
     background: "#171921",
     color: "#fff",
-    borderRadius: "22px",
-    padding: "18px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
+    borderRadius: 20,
+    padding: 18,
+    marginTop: 18,
   },
-  darkMini: {
-    fontSize: "12px",
+
+  summaryMini: {
+    fontSize: 11,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    color: "rgba(255,255,255,0.55)",
+    color:
+      "rgba(255,255,255,0.55)",
     fontWeight: 700,
+    marginBottom: 8,
   },
-  darkBig: {
-    fontSize: "34px",
+
+  summaryValue: {
+    fontSize: 30,
     lineHeight: 1,
     fontWeight: 900,
-    letterSpacing: "-0.05em",
+    letterSpacing:
+      "-0.05em",
+    marginBottom: 9,
   },
-  darkText: {
-    color: "rgba(255,255,255,0.72)",
-    fontSize: "14px",
-    lineHeight: 1.6,
+
+  summaryText: {
+    color:
+      "rgba(255,255,255,0.62)",
+    fontSize: 13,
+    lineHeight: 1.55,
   },
-  darkButton: {
-    marginTop: "8px",
-    height: "52px",
-    borderRadius: "14px",
-    border: "none",
-    background: "linear-gradient(135deg, #c91f28 0%, #9f161e 100%)",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  editItemsViewport: {
+
+  messageEditor: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
     minHeight: 0,
-    overflowY: "auto",
-    paddingRight: "4px",
   },
-  editItemsList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  },
-  editItemCard: (isMobile) => ({
-    background: "#fff",
-    borderRadius: "20px",
-    padding: "16px",
-    border: "1px solid #eee8df",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "stretch" : "center",
-    gap: "16px",
-    flexDirection: isMobile ? "column" : "row",
-  }),
-  editItemLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-    minWidth: 0,
-  },
-  itemImageBox: {
-    width: "72px",
-    height: "72px",
-    borderRadius: "16px",
-    overflow: "hidden",
-    background: "#ece7df",
-    flexShrink: 0,
-  },
-  itemImage: {
+
+  textarea: {
     width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-  itemImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#777",
-    fontSize: "11px",
-    fontWeight: 700,
-    textAlign: "center",
-    padding: "6px",
-  },
-  editItemInfo: {
-    minWidth: 0,
-  },
-  editItemName: {
-    fontSize: "18px",
-    fontWeight: 800,
+    minHeight: 330,
+    flex: 1,
+    resize: "vertical",
+    borderRadius: 16,
+    border:
+      "1px solid #ddd",
+    padding: 15,
+    background: "#f8f6f2",
     color: "#111",
-    letterSpacing: "-0.03em",
-    marginBottom: "4px",
-  },
-  editItemRight: (isMobile) => ({
-    display: "flex",
-    alignItems: isMobile ? "stretch" : "center",
-    gap: "14px",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    flexDirection: isMobile ? "column" : "row",
-  }),
-  qtyEditBox: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  qtyInput: {
-    width: "84px",
-    height: "42px",
-    borderRadius: "12px",
-    border: "1px solid #ddd",
-    padding: "0 10px",
+    fontSize: 14,
+    lineHeight: 1.7,
     outline: "none",
+    boxSizing: "border-box",
   },
-  removeButton: (isMobile) => ({
-    height: "44px",
-    padding: "0 16px",
-    borderRadius: "999px",
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontWeight: 700,
+
+  modalActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+
+  cancelButton: {
+    height: 50,
+    padding: "0 18px",
+    borderRadius: 14,
+    border:
+      "1px solid #ddd",
+    background: "#fff",
+    color: "#111",
+    fontWeight: 800,
     cursor: "pointer",
-    width: isMobile ? "100%" : "auto",
-  }),
+  },
+
+  saveButton: {
+    height: 50,
+    padding: "0 20px",
+    borderRadius: 14,
+    border: "none",
+    background:
+      "linear-gradient(135deg, #c91f28 0%, #9f161e 100%)",
+    color: "#fff",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
+  disabledButton: {
+    opacity: 0.65,
+    cursor: "not-allowed",
+  },
 };
 
 export default SalesHistory;

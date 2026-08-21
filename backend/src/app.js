@@ -11,14 +11,23 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const rankingRoutes = require("./routes/rankingRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 
+// NOVA ROTA DE DESEMPENHO
+const performanceRoutes = require("./routes/performanceRoutes");
+
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "..", "uploads"))
+);
 
 app.get("/", (req, res) => {
-  res.json({ message: "API LiftBarberStore rodando." });
+  res.json({
+    message: "API LiftBarberStore rodando.",
+  });
 });
 
 app.use("/users", userRoutes);
@@ -29,5 +38,8 @@ app.use("/sales", saleRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/ranking", rankingRoutes);
 app.use("/ai", aiRoutes);
+
+// NOVA ROTA
+app.use("/performance", performanceRoutes);
 
 module.exports = app;

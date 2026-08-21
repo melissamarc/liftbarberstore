@@ -5,7 +5,6 @@ import api, { getImageUrl } from "../services/api";
 
 function Dashboard() {
   const [resumo, setResumo] = useState(null);
-  const [topProdutos, setTopProdutos] = useState([]);
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
@@ -19,17 +18,15 @@ function Dashboard() {
         setLoading(true);
         setErro("");
 
-        const [resumoResponse, produtosResponse, rankingResponse] =
-          await Promise.all([
-            api.get("/dashboard"),
-            api.get("/dashboard/top-products"),
-            api.get("/ranking"),
-          ]);
+        const [resumoResponse, rankingResponse] = await Promise.all([
+          api.get("/dashboard"),
+          api.get("/ranking"),
+        ]);
 
         setResumo(resumoResponse.data);
-        setTopProdutos(produtosResponse.data);
         setRanking(rankingResponse.data.slice(0, 8));
       } catch (error) {
+        console.error("Erro ao carregar dashboard:", error);
         setErro("Erro ao carregar dashboard.");
       } finally {
         setLoading(false);
@@ -39,12 +36,19 @@ function Dashboard() {
     carregarDashboard();
   }, []);
 
+  function formatarMoeda(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
   if (loading) {
     return <p>Carregando dashboard...</p>;
   }
 
   if (erro) {
-    return <p>{erro}</p>;
+    return <p style={styles.erro}>{erro}</p>;
   }
 
   return (
@@ -52,27 +56,29 @@ function Dashboard() {
       <header style={styles.topBar(isMobile)}>
         <div>
           <p style={styles.greetingMini}>Painel principal</p>
+
           <h1 style={styles.greetingTitle(isMobile)}>
             Olá, {usuario?.nome?.split(" ")[0] || "Usuário"}!
           </h1>
-         <p style={styles.greetingText}>
-  Aqui está uma visão geral das vendas de hoje e da semana atual, que reinicia toda sexta-feira.
-</p>
+
+          <p style={styles.greetingText}>
+            Acompanhe as vendas da equipe e o desempenho da loja.
+          </p>
         </div>
 
-        <div style={styles.searchBox(isMobile)}>
-          <span style={styles.searchIcon}>⌕</span>
-          <span style={styles.searchText}>Seu sistema está online</span>
+        <div style={styles.onlineBox(isMobile)}>
+          <span style={styles.onlineDot}></span>
+          <span style={styles.onlineText}>Seu sistema está online</span>
         </div>
       </header>
 
       <section
         style={styles.dashboardBoard(
-          isMobile ? "1fr" : isTablet ? "1fr" : "1.3fr 0.85fr",
+          isMobile ? "1fr" : isTablet ? "1fr" : "1.35fr 0.85fr",
           isMobile
         )}
       >
-        <div style={styles.leftColumn(isMobile)}>
+        <div style={styles.leftColumn}>
           <div style={styles.highlightCard}>
             <div style={styles.highlightHeader}>
               <div>
@@ -81,167 +87,152 @@ function Dashboard() {
               </div>
             </div>
 
-            <div style={styles.metricsList}>
-              <div style={styles.metricRow(isMobile)}>
+            <div
+              style={styles.metricsGrid(
+                isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))"
+              )}
+            >
+              <div style={styles.metricCard}>
                 <div>
                   <p style={styles.metricLabel}>Total vendido hoje</p>
-                  <strong style={styles.metricValue}>
-                    R$ {Number(resumo?.total_vendido_hoje || 0).toFixed(2)}
+                  <strong style={styles.metricValue(isMobile)}>
+                    {formatarMoeda(resumo?.total_vendido_hoje)}
                   </strong>
                 </div>
+
                 <span style={styles.metricTagRed}>Hoje</span>
               </div>
 
-              <div style={styles.metricRow(isMobile)}>
+              <div style={styles.metricCard}>
                 <div>
-                  <p style={styles.metricLabel}>Quantidade de vendas hoje</p>
-                  <strong style={styles.metricValue}>
+                  <p style={styles.metricLabel}>Vendas realizadas hoje</p>
+                  <strong style={styles.metricValue(isMobile)}>
                     {resumo?.quantidade_vendas_hoje || 0}
                   </strong>
                 </div>
+
                 <span style={styles.metricTagDark}>Dia</span>
               </div>
 
-              <div style={styles.metricRow(isMobile)}>
+              <div style={styles.metricCard}>
                 <div>
-<p style={styles.metricLabel}>Total vendido na semana atual</p>
-                  <strong style={styles.metricValue}>
-                    R$ {Number(resumo?.total_vendido_semana || 0).toFixed(2)}
+                  <p style={styles.metricLabel}>Total vendido na semana</p>
+                  <strong style={styles.metricValue(isMobile)}>
+                    {formatarMoeda(resumo?.total_vendido_semana)}
                   </strong>
                 </div>
-<span style={styles.metricTagYellow}>Sex-Qui</span>
+
+                <span style={styles.metricTagYellow}>Sex–Qui</span>
               </div>
 
-              <div style={styles.metricRow(isMobile)}>
+              <div style={styles.metricCard}>
                 <div>
-<p style={styles.metricLabel}>Vendas na semana atual</p>
-                  <strong style={styles.metricValue}>
+                  <p style={styles.metricLabel}>Vendas na semana</p>
+                  <strong style={styles.metricValue(isMobile)}>
                     {resumo?.quantidade_vendas_semana || 0}
                   </strong>
                 </div>
-                <span style={styles.metricTagBlue}>Período</span>
+
+                <span style={styles.metricTagBlue}>Semana</span>
               </div>
 
-              <div style={styles.metricRow(isMobile)}>
+              <div style={styles.metricCard}>
                 <div>
-                  <p style={styles.metricLabel}>Lucro hoje</p>
-                  <strong style={styles.metricValue}>
-                    R$ {Number(resumo?.lucro_hoje || 0).toFixed(2)}
+                  <p style={styles.metricLabel}>Total vendido no mês</p>
+                  <strong style={styles.metricValue(isMobile)}>
+                    {formatarMoeda(resumo?.total_vendido_mes)}
                   </strong>
                 </div>
-                <span style={styles.metricTagGreen}>Lucro</span>
-              </div>
 
-              <div style={styles.metricRow(isMobile)}>
-                <div>
-                  <p style={styles.metricLabel}>Lucro do mês</p>
-                  <strong style={styles.metricValue}>
-                    R$ {Number(resumo?.lucro_mes || 0).toFixed(2)}
-                  </strong>
-                </div>
                 <span style={styles.metricTagPurple}>Mês</span>
               </div>
 
-              <div style={styles.metricRow(isMobile)}>
+              <div style={styles.metricCard}>
                 <div>
-                  <p style={styles.metricLabel}>Faturamento do mês</p>
-                  <strong style={styles.metricValue}>
-                    R$ {Number(resumo?.faturamento_mes || 0).toFixed(2)}
+                  <p style={styles.metricLabel}>Vendas realizadas no mês</p>
+                  <strong style={styles.metricValue(isMobile)}>
+                    {resumo?.quantidade_vendas_mes || 0}
                   </strong>
                 </div>
-                <span style={styles.metricTagDark}>Mensal</span>
-              </div>
 
-              <div style={styles.metricRow(isMobile)}>
-                <div>
-                  <p style={styles.metricLabel}>Ticket médio do mês</p>
-                  <strong style={styles.metricValue}>
-                    R$ {Number(resumo?.ticket_medio_mes || 0).toFixed(2)}
-                  </strong>
-                </div>
-                <span style={styles.metricTagBlue}>Médio</span>
+                <span style={styles.metricTagDark}>Mensal</span>
               </div>
             </div>
           </div>
 
           <div
-            style={styles.bottomRow(
-              isMobile ? "1fr" : isTablet ? "1fr" : "0.8fr 1.2fr"
+            style={styles.bottomGrid(
+              isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))"
             )}
           >
-            <div style={styles.smallCard}>
-              <div style={styles.smallCardTop}>
-                <div>
-                  <p style={styles.sectionMini}>Mês atual</p>
-<h3 style={styles.smallTitle}>Lucro dos produtos</h3>
-                </div>
-              </div>
+            <div style={styles.infoCard}>
+              <p style={styles.infoMini}>Hoje</p>
 
-              <div style={styles.metricNumberSmall}>
-                R$ {Number(resumo?.lucro_mes || 0).toFixed(2)}
-              </div>
+              <h3 style={styles.infoNumber}>
+                {resumo?.quantidade_vendas_hoje || 0}
+              </h3>
 
-              <p style={styles.metricText}>
-lucro calculado apenas nas vendas manuais com produtos cadastrados              </p>
+              <p style={styles.infoText}>
+                vendas registradas no sistema durante o dia.
+              </p>
             </div>
 
-            <div style={styles.wideCard}>
-              <div style={styles.smallCardTop}>
-                <div>
-                  <p style={styles.sectionMini}>Produtos</p>
-                  <h3 style={styles.smallTitle}>Mais vendidos</h3>
-                </div>
-              </div>
+            <div style={styles.infoCard}>
+              <p style={styles.infoMini}>Semana atual</p>
 
-              <div style={styles.scrollArea}>
-                {topProdutos.length === 0 ? (
-                  <p style={styles.emptyText}>Nenhum produto vendido ainda.</p>
-                ) : (
-                  <div style={styles.productList}>
-                    {topProdutos.map((produto) => (
-                      <div key={produto.id} style={styles.productItem(isMobile)}>
-                        <div>
-                          <p style={styles.productName}>{produto.nome}</p>
-                          <p style={styles.productMeta}>
-                            {produto.total_quantidade_vendida} unidades vendidas
-                          </p>
-                          <p style={styles.productMeta}>
-                            Lucro: R$ {Number(produto.total_lucro || 0).toFixed(2)}
-                          </p>
-                        </div>
+              <h3 style={styles.infoNumber}>
+                {formatarMoeda(resumo?.total_vendido_semana)}
+              </h3>
 
-                        <strong style={styles.productValue}>
-                          R$ {Number(produto.total_valor_vendido).toFixed(2)}
-                        </strong>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <p style={styles.infoText}>
+                acumulado desde sexta-feira até o momento.
+              </p>
+            </div>
+
+            <div style={styles.infoCardDark}>
+              <p style={styles.infoMiniDark}>Mês atual</p>
+
+              <h3 style={styles.infoNumberDark}>
+                {formatarMoeda(resumo?.total_vendido_mes)}
+              </h3>
+
+              <p style={styles.infoTextDark}>
+                faturamento registrado durante o mês.
+              </p>
             </div>
           </div>
         </div>
 
         <div style={styles.rightColumn}>
-          <div style={styles.darkCard}>
-            <div style={styles.darkCardHeader}>
+          <div style={styles.rankingCard}>
+            <div style={styles.rankingHeader}>
               <div>
                 <p style={styles.darkMini}>Equipe</p>
-                <h3 style={styles.darkTitle}>Top da loja</h3>
+                <h3 style={styles.darkTitle}>Ranking de vendas</h3>
+                <p style={styles.rankingDescription}>
+                  Desempenho dos vendedores na semana atual.
+                </p>
               </div>
             </div>
 
             <div style={styles.rankingScroll}>
               {ranking.length === 0 ? (
-                <p style={styles.emptyDark}>Nenhum ranking disponível.</p>
+                <p style={styles.emptyDark}>
+                  Nenhuma venda registrada ainda.
+                </p>
               ) : (
                 ranking.map((item) => {
                   const urlFoto = getImageUrl(item.foto_perfil);
 
                   return (
-                    <div key={item.usuario_id} style={styles.rankRow(isMobile)}>
+                    <div
+                      key={item.usuario_id}
+                      style={styles.rankRow(isMobile)}
+                    >
                       <div style={styles.rankLeft}>
-                        <span style={styles.rankPos}>{item.posicao}</span>
+                        <span style={styles.rankPos}>
+                          {item.posicao}
+                        </span>
 
                         {urlFoto ? (
                           <img
@@ -251,20 +242,28 @@ lucro calculado apenas nas vendas manuais com produtos cadastrados              
                           />
                         ) : (
                           <div style={styles.rankAvatarPlaceholder}>
-                            {item.usuario_nome?.charAt(0)?.toUpperCase() || "U"}
+                            {item.usuario_nome
+                              ?.charAt(0)
+                              ?.toUpperCase() || "U"}
                           </div>
                         )}
 
-                        <div>
-                          <p style={styles.rankName}>{item.usuario_nome}</p>
+                        <div style={styles.rankUserInfo}>
+                          <p style={styles.rankName}>
+                            {item.usuario_nome}
+                          </p>
+
                           <p style={styles.rankSub}>
-                            {item.quantidade_vendas} vendas
+                            {item.quantidade_vendas || 0}{" "}
+                            {Number(item.quantidade_vendas) === 1
+                              ? "venda"
+                              : "vendas"}
                           </p>
                         </div>
                       </div>
 
                       <strong style={styles.rankValue}>
-                        R$ {Number(item.total_vendido).toFixed(2)}
+                        {formatarMoeda(item.total_vendido)}
                       </strong>
                     </div>
                   );
@@ -272,28 +271,14 @@ lucro calculado apenas nas vendas manuais com produtos cadastrados              
               )}
             </div>
 
-            <div style={styles.darkDivider}></div>
-
-            <div style={styles.profitBox}>
-<p style={styles.darkMini}>Maior lucro com produtos</p>
-
-              <h3 style={styles.profitTitle}>
-                {resumo?.vendedor_mais_lucrativo?.nome || "Sem dados"}
-              </h3>
-
-              <p style={styles.profitText}>
-                R$ {Number(resumo?.vendedor_mais_lucrativo?.lucro_total || 0).toFixed(2)}
+            <div style={styles.rankingFooter}>
+              <p style={styles.rankingFooterTitle}>
+                Semana de vendas
               </p>
-            </div>
 
-            <div style={styles.profitBox}>
-<p style={styles.darkMini}>Produto mais lucrativo</p>
-              <h3 style={styles.profitTitle}>
-                {resumo?.produto_mais_lucrativo?.nome || "Sem dados"}
-              </h3>
-
-              <p style={styles.profitText}>
-                R$ {Number(resumo?.produto_mais_lucrativo?.lucro_total || 0).toFixed(2)}
+              <p style={styles.rankingFooterText}>
+                O ranking considera as vendas registradas de sexta-feira
+                até quinta-feira e começa um novo período toda sexta-feira.
               </p>
             </div>
           </div>
@@ -311,6 +296,12 @@ const styles = {
     flexDirection: "column",
     gap: "18px",
   },
+
+  erro: {
+    color: "#b00020",
+    fontWeight: 700,
+  },
+
   topBar: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
@@ -319,6 +310,7 @@ const styles = {
     flexWrap: "wrap",
     flexDirection: isMobile ? "column" : "row",
   }),
+
   greetingMini: {
     fontSize: "13px",
     textTransform: "uppercase",
@@ -327,6 +319,7 @@ const styles = {
     fontWeight: 700,
     marginBottom: "8px",
   },
+
   greetingTitle: (isMobile) => ({
     fontSize: isMobile ? "28px" : "36px",
     lineHeight: 1.05,
@@ -335,12 +328,14 @@ const styles = {
     color: "#111",
     marginBottom: "10px",
   }),
+
   greetingText: {
     color: "#666",
     fontSize: "15px",
     lineHeight: 1.7,
   },
-  searchBox: (isMobile) => ({
+
+  onlineBox: (isMobile) => ({
     minWidth: isMobile ? "100%" : "250px",
     width: isMobile ? "100%" : "auto",
     background: "rgba(255,255,255,0.65)",
@@ -351,32 +346,40 @@ const styles = {
     alignItems: "center",
     gap: "10px",
     padding: "0 16px",
-    color: "#666",
   }),
-  searchIcon: {
-    fontSize: "16px",
+
+  onlineDot: {
+    width: "9px",
+    height: "9px",
+    borderRadius: "50%",
+    background: "#168a4a",
   },
-  searchText: {
+
+  onlineText: {
     fontSize: "14px",
-    fontWeight: 500,
+    fontWeight: 600,
+    color: "#666",
   },
+
   dashboardBoard: (columns, isMobile) => ({
     display: "grid",
     gridTemplateColumns: columns,
     gap: "18px",
     height: isMobile ? "auto" : "calc(100vh - 230px)",
     minHeight: isMobile ? "auto" : "620px",
-    maxHeight: isMobile ? "none" : "620px",
   }),
-  leftColumn: (isMobile) => ({
+
+  leftColumn: {
     display: "grid",
-    gridTemplateRows: isMobile ? "auto auto" : "1fr 0.9fr",
+    gridTemplateRows: "minmax(0, 1fr) auto",
     gap: "18px",
     minHeight: 0,
-  }),
+  },
+
   rightColumn: {
     minHeight: 0,
   },
+
   highlightCard: {
     background: "#d8cec0",
     borderRadius: "24px",
@@ -386,10 +389,11 @@ const styles = {
     flexDirection: "column",
     minHeight: 0,
   },
+
   highlightHeader: {
-    marginBottom: "14px",
-    flexShrink: 0,
+    marginBottom: "16px",
   },
+
   sectionMini: {
     fontSize: "12px",
     textTransform: "uppercase",
@@ -398,198 +402,182 @@ const styles = {
     fontWeight: 700,
     marginBottom: "6px",
   },
+
   sectionTitle: {
     fontSize: "22px",
     fontWeight: 800,
     color: "#111",
     letterSpacing: "-0.04em",
   },
-  metricsList: {
-    display: "flex",
-    flexDirection: "column",
+
+  metricsGrid: (columns) => ({
+    display: "grid",
+    gridTemplateColumns: columns,
     gap: "12px",
-    flex: 1,
     minHeight: 0,
     overflowY: "auto",
     paddingRight: "4px",
-  },
-  metricRow: (isMobile) => ({
-    background: "rgba(255,255,255,0.44)",
+  }),
+
+  metricCard: {
+    background: "rgba(255,255,255,0.48)",
     border: "1px solid rgba(17,17,17,0.05)",
     borderRadius: "18px",
-    padding: "16px 18px",
+    padding: "17px",
     display: "flex",
     justifyContent: "space-between",
-    alignItems: isMobile ? "flex-start" : "center",
-    gap: "16px",
-    flexDirection: isMobile ? "column" : "row",
-  }),
+    alignItems: "flex-start",
+    gap: "12px",
+  },
+
   metricLabel: {
-    fontSize: "12px",
+    fontSize: "11px",
     color: "#5b5349",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
     fontWeight: 700,
-    marginBottom: "6px",
+    marginBottom: "7px",
   },
-  metricValue: {
-    fontSize: "24px",
+
+  metricValue: (isMobile) => ({
+    fontSize: isMobile ? "22px" : "25px",
     fontWeight: 900,
     color: "#111",
     letterSpacing: "-0.04em",
-  },
+  }),
+
   metricTagRed: {
-    padding: "8px 12px",
+    padding: "7px 10px",
     borderRadius: "999px",
     background: "rgba(201,31,40,0.14)",
     color: "#8f1118",
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 800,
+    whiteSpace: "nowrap",
   },
+
   metricTagDark: {
-    padding: "8px 12px",
+    padding: "7px 10px",
     borderRadius: "999px",
     background: "#111",
     color: "#fff",
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 800,
+    whiteSpace: "nowrap",
   },
+
   metricTagYellow: {
-    padding: "8px 12px",
+    padding: "7px 10px",
     borderRadius: "999px",
     background: "rgba(241,203,58,0.32)",
     color: "#6f5700",
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 800,
+    whiteSpace: "nowrap",
   },
+
   metricTagBlue: {
-    padding: "8px 12px",
+    padding: "7px 10px",
     borderRadius: "999px",
     background: "rgba(31,79,163,0.16)",
     color: "#1f4fa3",
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 800,
+    whiteSpace: "nowrap",
   },
-  metricTagGreen: {
-    padding: "8px 12px",
-    borderRadius: "999px",
-    background: "rgba(18,130,70,0.15)",
-    color: "#0b7f44",
-    fontSize: "12px",
-    fontWeight: 800,
-  },
+
   metricTagPurple: {
-    padding: "8px 12px",
+    padding: "7px 10px",
     borderRadius: "999px",
     background: "rgba(120,70,255,0.15)",
     color: "#5d34d6",
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 800,
+    whiteSpace: "nowrap",
   },
-  bottomRow: (columns) => ({
+
+  bottomGrid: (columns) => ({
     display: "grid",
     gridTemplateColumns: columns,
     gap: "18px",
-    minHeight: 0,
   }),
-  smallCard: {
+
+  infoCard: {
     background: "#fff",
-    borderRadius: "24px",
-    padding: "20px",
+    borderRadius: "22px",
+    padding: "18px",
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-    minHeight: 0,
   },
-  wideCard: {
-    background: "#fff",
-    borderRadius: "24px",
-    padding: "20px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-    display: "flex",
-    flexDirection: "column",
-    minHeight: 0,
+
+  infoCardDark: {
+    background: "#171921",
+    borderRadius: "22px",
+    padding: "18px",
+    boxShadow: "0 6px 18px rgba(0,0,0,0.10)",
   },
-  smallCardTop: {
-    marginBottom: "14px",
-    flexShrink: 0,
-  },
-  smallTitle: {
-    fontSize: "20px",
-    fontWeight: 800,
-    letterSpacing: "-0.04em",
-    color: "#111",
-  },
-  metricNumber: {
-    fontSize: "52px",
-    lineHeight: 1,
-    fontWeight: 900,
-    color: "#111",
-    letterSpacing: "-0.06em",
-    marginBottom: "10px",
-  },
-  metricNumberSmall: {
-    fontSize: "32px",
-    lineHeight: 1.1,
-    fontWeight: 900,
-    color: "#111",
-    letterSpacing: "-0.06em",
-    marginBottom: "10px",
-  },
-  metricText: {
-    color: "#666",
-    fontSize: "14px",
-    lineHeight: 1.6,
-  },
-  scrollArea: {
-    flex: 1,
-    minHeight: 0,
-    overflowY: "auto",
-    paddingRight: "4px",
-  },
-  productList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  productItem: (isMobile) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "flex-start" : "center",
-    gap: "14px",
-    padding: "12px 0",
-    borderBottom: "1px solid #eee8df",
-    flexDirection: isMobile ? "column" : "row",
-  }),
-  productName: {
-    fontSize: "15px",
+
+  infoMini: {
+    fontSize: "11px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "#777",
     fontWeight: 700,
-    color: "#111",
-    marginBottom: "4px",
+    marginBottom: "10px",
   },
-  productMeta: {
-    fontSize: "13px",
+
+  infoMiniDark: {
+    fontSize: "11px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "rgba(255,255,255,0.55)",
+    fontWeight: 700,
+    marginBottom: "10px",
+  },
+
+  infoNumber: {
+    fontSize: "27px",
+    fontWeight: 900,
+    color: "#111",
+    letterSpacing: "-0.05em",
+    marginBottom: "8px",
+  },
+
+  infoNumberDark: {
+    fontSize: "27px",
+    fontWeight: 900,
+    color: "#fff",
+    letterSpacing: "-0.05em",
+    marginBottom: "8px",
+  },
+
+  infoText: {
     color: "#666",
+    fontSize: "13px",
+    lineHeight: 1.5,
   },
-  productValue: {
-    fontSize: "15px",
-    fontWeight: 800,
-    color: "#111",
-    whiteSpace: "nowrap",
+
+  infoTextDark: {
+    color: "rgba(255,255,255,0.62)",
+    fontSize: "13px",
+    lineHeight: 1.5,
   },
-  darkCard: {
+
+  rankingCard: {
+    height: "100%",
     background: "#171921",
     color: "#fff",
     borderRadius: "24px",
     padding: "20px",
-    minHeight: "100%",
-    maxHeight: "100%",
     boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
     display: "flex",
     flexDirection: "column",
+    minHeight: 0,
   },
-  darkCardHeader: {
-    marginBottom: "14px",
-    flexShrink: 0,
+
+  rankingHeader: {
+    marginBottom: "16px",
   },
+
   darkMini: {
     fontSize: "12px",
     textTransform: "uppercase",
@@ -598,11 +586,20 @@ const styles = {
     fontWeight: 700,
     marginBottom: "6px",
   },
+
   darkTitle: {
-    fontSize: "22px",
+    fontSize: "23px",
     fontWeight: 800,
     letterSpacing: "-0.04em",
   },
+
+  rankingDescription: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: "13px",
+    marginTop: "7px",
+    lineHeight: 1.5,
+  },
+
   rankingScroll: {
     flex: 1,
     minHeight: 0,
@@ -610,37 +607,41 @@ const styles = {
     paddingRight: "4px",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
   },
+
   rankRow: (isMobile) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: isMobile ? "flex-start" : "center",
     gap: "12px",
-    padding: "12px 0",
+    padding: "14px 0",
     borderBottom: "1px solid rgba(255,255,255,0.08)",
     flexDirection: isMobile ? "column" : "row",
   }),
+
   rankLeft: {
     display: "flex",
     alignItems: "center",
     gap: "10px",
     minWidth: 0,
   },
+
   rankPos: {
     width: "20px",
-    fontWeight: 800,
+    fontWeight: 900,
     color: "#f1cb3a",
   },
+
   rankAvatar: {
-    width: "34px",
-    height: "34px",
+    width: "38px",
+    height: "38px",
     borderRadius: "50%",
     objectFit: "cover",
   },
+
   rankAvatarPlaceholder: {
-    width: "34px",
-    height: "34px",
+    width: "38px",
+    height: "38px",
     borderRadius: "50%",
     background: "#2b2f38",
     display: "flex",
@@ -649,6 +650,11 @@ const styles = {
     fontWeight: 800,
     fontSize: "13px",
   },
+
+  rankUserInfo: {
+    minWidth: 0,
+  },
+
   rankName: {
     fontSize: "14px",
     fontWeight: 700,
@@ -656,46 +662,43 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
+
   rankSub: {
     fontSize: "12px",
     color: "rgba(255,255,255,0.55)",
-    marginTop: "2px",
+    marginTop: "3px",
   },
+
   rankValue: {
     fontSize: "14px",
     fontWeight: 800,
     color: "#fff",
     whiteSpace: "nowrap",
   },
-  darkDivider: {
-    width: "100%",
-    height: "1px",
-    background: "rgba(255,255,255,0.08)",
-    margin: "16px 0",
-  },
-  profitBox: {
+
+  rankingFooter: {
     background: "rgba(255,255,255,0.05)",
     border: "1px solid rgba(255,255,255,0.08)",
     borderRadius: "18px",
-    padding: "14px",
-    marginTop: "10px",
+    padding: "15px",
+    marginTop: "16px",
   },
-  profitTitle: {
-    fontSize: "18px",
+
+  rankingFooterTitle: {
+    fontSize: "13px",
     fontWeight: 800,
     color: "#fff",
-    marginBottom: "6px",
+    marginBottom: "5px",
   },
-  profitText: {
-    color: "#f1cb3a",
-    fontSize: "15px",
-    fontWeight: 800,
+
+  rankingFooterText: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: "12px",
+    lineHeight: 1.55,
   },
+
   emptyDark: {
     color: "rgba(255,255,255,0.6)",
-  },
-  emptyText: {
-    color: "#666",
     fontSize: "14px",
   },
 };

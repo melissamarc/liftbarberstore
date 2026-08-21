@@ -10,74 +10,74 @@ async function rankingVendedores(req, res) {
         u.email AS usuario_email,
         u.foto_perfil,
 
-        COALESCE(vendas_resumo.total_vendido, 0) AS total_vendido,
-        COALESCE(vendas_resumo.quantidade_vendas, 0) AS quantidade_vendas,
-        COALESCE(itens_resumo.quantidade_itens_vendidos, 0) AS quantidade_itens_vendidos
+        COALESCE(SUM(v.valor_total), 0) AS total_vendido,
+        COUNT(v.id) AS quantidade_vendas
 
       FROM usuarios u
 
-      LEFT JOIN (
-        SELECT
-          usuario_id,
-          SUM(valor_total) AS total_vendido,
-          COUNT(id) AS quantidade_vendas
-        FROM vendas
-        WHERE data_criacao >= DATE_SUB(
-          CURDATE(),
-          INTERVAL WEEKDAY(CURDATE()) DAY
-        )
-        AND data_criacao < DATE_ADD(
-          DATE_SUB(
-            CURDATE(),
-            INTERVAL WEEKDAY(CURDATE()) DAY
-          ),
-          INTERVAL 7 DAY
-        )
-        GROUP BY usuario_id
-      ) vendas_resumo ON vendas_resumo.usuario_id = u.id
+      LEFT JOIN vendas v
+        ON v.usuario_id = u.id
 
-      LEFT JOIN (
-        SELECT
-          v.usuario_id,
-          SUM(iv.quantidade) AS quantidade_itens_vendidos
-        FROM vendas v
-        INNER JOIN itens_venda iv ON iv.venda_id = v.id
-        WHERE v.data_criacao >= DATE_SUB(
+        AND COALESCE(
+          v.data_venda,
+          DATE(v.data_criacao)
+        ) >= DATE_SUB(
           CURDATE(),
-          INTERVAL WEEKDAY(CURDATE()) DAY
+          INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY
         )
-        AND v.data_criacao < DATE_ADD(
+
+        AND COALESCE(
+          v.data_venda,
+          DATE(v.data_criacao)
+        ) < DATE_ADD(
           DATE_SUB(
             CURDATE(),
-            INTERVAL WEEKDAY(CURDATE()) DAY
+            INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY
           ),
           INTERVAL 7 DAY
         )
-        GROUP BY v.usuario_id
-      ) itens_resumo ON itens_resumo.usuario_id = u.id
 
       WHERE u.ativo = TRUE
+
+      GROUP BY
+        u.id,
+        u.nome,
+        u.email,
+        u.foto_perfil
 
       ORDER BY
         total_vendido DESC,
         quantidade_vendas DESC,
-        quantidade_itens_vendidos DESC
+        u.nome ASC
     `);
 
-    const rankingFormatado = ranking.map((item, index) => ({
-      posicao: index + 1,
-      usuario_id: item.usuario_id,
-      usuario_nome: item.usuario_nome,
-      usuario_email: item.usuario_email,
-      foto_perfil: item.foto_perfil,
-      total_vendido: Number(item.total_vendido),
-      quantidade_vendas: Number(item.quantidade_vendas),
-      quantidade_itens_vendidos: Number(item.quantidade_itens_vendidos),
-    }));
+    const rankingFormatado = ranking.map(
+      (item, index) => ({
+        posicao: index + 1,
 
-    return res.status(200).json(rankingFormatado);
+        usuario_id: item.usuario_id,
+        usuario_nome: item.usuario_nome,
+        usuario_email: item.usuario_email,
+        foto_perfil: item.foto_perfil,
+
+        total_vendido: Number(
+          item.total_vendido
+        ),
+
+        quantidade_vendas: Number(
+          item.quantidade_vendas
+        ),
+      })
+    );
+
+    return res
+      .status(200)
+      .json(rankingFormatado);
   } catch (error) {
-    console.error("Erro ao carregar ranking:", error.message);
+    console.error(
+      "Erro ao carregar ranking:",
+      error.message
+    );
 
     return res.status(500).json({
       message: "Erro ao carregar ranking.",

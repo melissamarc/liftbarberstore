@@ -1,8 +1,8 @@
 const express = require("express");
+
 const router = express.Router();
 
 const {
-  criarVendaManual,
   criarVendaIa,
   atualizarVenda,
   listarVendas,
@@ -13,15 +13,7 @@ const {
 const authMiddleware = require("../middlewares/authMiddleware");
 const roleMiddleware = require("../middlewares/roleMiddleware");
 
-// criar venda manual: admin e vendedor
-router.post(
-  "/manual",
-  authMiddleware,
-  roleMiddleware("admin", "vendedor"),
-  criarVendaManual
-);
-
-// criar venda com IA confirmada: admin e vendedor
+// REGISTRAR VENDA DO CATÁLOGO
 router.post(
   "/ia",
   authMiddleware,
@@ -29,7 +21,7 @@ router.post(
   criarVendaIa
 );
 
-// listar vendas: admin e vendedor
+// LISTAR VENDAS
 router.get(
   "/",
   authMiddleware,
@@ -37,7 +29,7 @@ router.get(
   listarVendas
 );
 
-// buscar venda por id: admin e vendedor
+// BUSCAR VENDA POR ID
 router.get(
   "/:id",
   authMiddleware,
@@ -45,7 +37,7 @@ router.get(
   buscarVendaPorId
 );
 
-// atualizar venda: admin e vendedor
+// ATUALIZAR VENDA
 router.put(
   "/:id",
   authMiddleware,
@@ -53,7 +45,7 @@ router.put(
   atualizarVenda
 );
 
-// excluir venda: admin e vendedor
+// EXCLUIR VENDA
 router.delete(
   "/:id",
   authMiddleware,

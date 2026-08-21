@@ -9,8 +9,7 @@ function DashboardLayout({ children }) {
   const location = useLocation();
   const { isMobile, isTablet } = useResponsive();
 
- const urlFoto = getImageUrl(usuario.foto_perfil);
- 
+  const urlFoto = getImageUrl(usuario?.foto_perfil);
 
   function handleLogout() {
     logout();
@@ -24,15 +23,19 @@ function DashboardLayout({ children }) {
   const links = [
     { path: "/dashboard", label: "Dashboard", icon: "◉" },
     { path: "/produtos", label: "Produtos", icon: "▣" },
-    { path: "/venda-manual", label: "Venda Manual", icon: "＋" },
-    { path: "/venda-ia", label: "Venda com IA", icon: "✦" },
+    { path: "/venda-ia", label: "Registrar Venda", icon: "✦" },
     { path: "/historico", label: "Histórico", icon: "☰" },
     { path: "/ranking", label: "Ranking", icon: "★" },
+    { path: "/desempenho", label: "Desempenho", icon: "▤" },
     { path: "/usuarios", label: "Usuários", icon: "◌" },
     { path: "/perfil", label: "Perfil", icon: "◎" },
   ];
 
-  const shellColumns = isMobile ? "1fr" : isTablet ? "220px 1fr" : "260px 1fr";
+  const shellColumns = isMobile
+    ? "1fr"
+    : isTablet
+    ? "220px 1fr"
+    : "260px 1fr";
 
   return (
     <div style={styles.page(isMobile)}>
@@ -72,6 +75,7 @@ function DashboardLayout({ children }) {
                     >
                       {item.icon}
                     </span>
+
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -82,7 +86,11 @@ function DashboardLayout({ children }) {
           <div style={styles.sidebarFooter(isMobile)}>
             <div style={styles.userCard}>
               {urlFoto ? (
-                <img src={urlFoto} alt="Foto do usuário" style={styles.avatar} />
+                <img
+                  src={urlFoto}
+                  alt="Foto do usuário"
+                  style={styles.avatar}
+                />
               ) : (
                 <div style={styles.avatarPlaceholder}>
                   {usuario?.nome?.charAt(0)?.toUpperCase() || "U"}
@@ -90,8 +98,13 @@ function DashboardLayout({ children }) {
               )}
 
               <div style={styles.userInfo}>
-                <p style={styles.userName}>{usuario?.nome}</p>
-                <p style={styles.userRole}>{usuario?.cargo}</p>
+                <p style={styles.userName}>
+                  {usuario?.nome || "Usuário"}
+                </p>
+
+                <p style={styles.userRole}>
+                  {usuario?.cargo || ""}
+                </p>
               </div>
             </div>
 
@@ -115,6 +128,7 @@ const styles = {
     background: "linear-gradient(135deg, #0a0a0a 0%, #171717 100%)",
     padding: isMobile ? "10px" : "20px",
   }),
+
   shell: (columns, isMobile) => ({
     minHeight: isMobile ? "auto" : "calc(100vh - 40px)",
     background: "linear-gradient(135deg, #f7f4ef 0%, #f1ebe3 100%)",
@@ -124,6 +138,7 @@ const styles = {
     gridTemplateColumns: columns,
     overflow: "hidden",
   }),
+
   sidebar: (isMobile) => ({
     background: "#111111",
     color: "#fff",
@@ -133,12 +148,14 @@ const styles = {
     justifyContent: "space-between",
     gap: "18px",
   }),
+
   brand: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
     marginBottom: "24px",
   },
+
   brandIcon: {
     width: "46px",
     height: "46px",
@@ -148,6 +165,7 @@ const styles = {
     overflow: "hidden",
     border: "1px solid rgba(255,255,255,0.08)",
   },
+
   brandBarberRed: {
     position: "absolute",
     left: "10px",
@@ -157,6 +175,7 @@ const styles = {
     background: "#c91f28",
     transform: "skewX(-18deg)",
   },
+
   brandBarberBlue: {
     position: "absolute",
     right: "10px",
@@ -166,6 +185,7 @@ const styles = {
     background: "#1f4fa3",
     transform: "skewX(-18deg)",
   },
+
   brandMini: {
     fontSize: "12px",
     color: "rgba(255,255,255,0.55)",
@@ -174,16 +194,21 @@ const styles = {
     marginBottom: "2px",
     fontWeight: 700,
   },
+
   brandTitle: {
     fontSize: "18px",
     fontWeight: 800,
     letterSpacing: "-0.03em",
   },
+
   nav: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "1fr",
+    gridTemplateColumns: isMobile
+      ? "repeat(2, minmax(0, 1fr))"
+      : "1fr",
     gap: "10px",
   }),
+
   navItem: {
     display: "flex",
     alignItems: "center",
@@ -193,11 +218,14 @@ const styles = {
     color: "rgba(255,255,255,0.75)",
     fontSize: "14px",
     fontWeight: 600,
+    textDecoration: "none",
   },
+
   navItemActive: {
     background: "rgba(255,255,255,0.08)",
     color: "#fff",
   },
+
   navIcon: {
     width: "30px",
     height: "30px",
@@ -210,13 +238,16 @@ const styles = {
     fontWeight: 700,
     flexShrink: 0,
   },
+
   navIconActive: {
     background: "linear-gradient(135deg, #c91f28 0%, #1f4fa3 100%)",
     color: "#fff",
   },
+
   sidebarFooter: (isMobile) => ({
     marginTop: isMobile ? "8px" : "24px",
   }),
+
   userCard: {
     display: "flex",
     alignItems: "center",
@@ -226,12 +257,14 @@ const styles = {
     padding: "12px",
     marginBottom: "14px",
   },
+
   avatar: {
     width: "46px",
     height: "46px",
     borderRadius: "50%",
     objectFit: "cover",
   },
+
   avatarPlaceholder: {
     width: "46px",
     height: "46px",
@@ -243,9 +276,11 @@ const styles = {
     fontWeight: 800,
     fontSize: "15px",
   },
+
   userInfo: {
     minWidth: 0,
   },
+
   userName: {
     fontSize: "14px",
     fontWeight: 700,
@@ -253,12 +288,14 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
+
   userRole: {
     fontSize: "12px",
     color: "rgba(255,255,255,0.6)",
     textTransform: "capitalize",
     marginTop: "3px",
   },
+
   logoutButton: {
     width: "100%",
     height: "46px",
@@ -269,6 +306,7 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
+
   main: (isMobile) => ({
     padding: isMobile ? "16px" : "26px",
     overflowY: "auto",

@@ -1,20 +1,18 @@
 const express = require("express");
-
 const router = express.Router();
 
 const {
-  resumoDashboard,
-} = require("../controllers/dashboardController");
+  desempenhoFuncionarios,
+} = require("../controllers/performanceController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 const roleMiddleware = require("../middlewares/roleMiddleware");
 
-// RESUMO DO DASHBOARD
 router.get(
   "/",
   authMiddleware,
   roleMiddleware("admin", "vendedor"),
-  resumoDashboard
+  desempenhoFuncionarios
 );
 
 module.exports = router;
