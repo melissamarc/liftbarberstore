@@ -1,6 +1,12 @@
 const pool = require("../config/db");
 
+// =====================================================
 // RANKING DE VENDEDORES
+//
+// Semana:
+// segunda-feira às 07:00
+// até a próxima segunda-feira às 06:59:59
+// =====================================================
 async function rankingVendedores(req, res) {
   try {
     const [ranking] = await pool.query(`
@@ -10,7 +16,11 @@ async function rankingVendedores(req, res) {
         u.email AS usuario_email,
         u.foto_perfil,
 
-        COALESCE(SUM(v.valor_total), 0) AS total_vendido,
+        COALESCE(
+          SUM(v.valor_total),
+          0
+        ) AS total_vendido,
+
         COUNT(v.id) AS quantidade_vendas
 
       FROM usuarios u
@@ -18,24 +28,54 @@ async function rankingVendedores(req, res) {
       LEFT JOIN vendas v
         ON v.usuario_id = u.id
 
-        AND COALESCE(
-          v.data_venda,
-          DATE(v.data_criacao)
-        ) >= DATE_SUB(
-          CURDATE(),
-          INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY
-        )
-
-        AND COALESCE(
-          v.data_venda,
-          DATE(v.data_criacao)
-        ) < DATE_ADD(
+        -- =============================================
+        -- INÍCIO DA SEMANA
+        -- Segunda-feira às 07:00
+        -- =============================================
+        AND v.data_criacao >=
           DATE_SUB(
-            CURDATE(),
-            INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY
-          ),
-          INTERVAL 7 DAY
-        )
+            DATE_ADD(
+              DATE_SUB(
+                CURDATE(),
+                INTERVAL WEEKDAY(CURDATE()) DAY
+              ),
+              INTERVAL 7 HOUR
+            ),
+            INTERVAL (
+              CASE
+                WHEN WEEKDAY(CURDATE()) = 0
+                  AND CURTIME() < '07:00:00'
+                THEN 7
+                ELSE 0
+              END
+            ) DAY
+          )
+
+        -- =============================================
+        -- FIM DA SEMANA
+        -- Próxima segunda-feira às 07:00
+        -- =============================================
+        AND v.data_criacao <
+          DATE_ADD(
+            DATE_SUB(
+              DATE_ADD(
+                DATE_SUB(
+                  CURDATE(),
+                  INTERVAL WEEKDAY(CURDATE()) DAY
+                ),
+                INTERVAL 7 HOUR
+              ),
+              INTERVAL (
+                CASE
+                  WHEN WEEKDAY(CURDATE()) = 0
+                    AND CURTIME() < '07:00:00'
+                  THEN 7
+                  ELSE 0
+                END
+              ) DAY
+            ),
+            INTERVAL 7 DAY
+          )
 
       WHERE u.ativo = TRUE
 
@@ -51,6 +91,9 @@ async function rankingVendedores(req, res) {
         u.nome ASC
     `);
 
+    // =====================================================
+    // FORMATAR RANKING
+    // =====================================================
     const rankingFormatado = ranking.map(
       (item, index) => ({
         posicao: index + 1,

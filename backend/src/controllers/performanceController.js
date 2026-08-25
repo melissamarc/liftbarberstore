@@ -1,6 +1,8 @@
 const pool = require("../config/db");
 
+// =====================================================
 // DESEMPENHO DOS FUNCIONÁRIOS
+// =====================================================
 async function desempenhoFuncionarios(req, res) {
   try {
     const { periodo = "semana" } = req.query;
@@ -8,25 +10,74 @@ async function desempenhoFuncionarios(req, res) {
     let filtroData = "";
 
     // =====================================================
-    // SEMANA ATUAL
-    // SEXTA-FEIRA ATÉ QUINTA-FEIRA
+    // HOJE
     // =====================================================
-    if (periodo === "semana") {
+    if (periodo === "dia") {
       filtroData = `
-        COALESCE(v.data_venda, DATE(v.data_criacao)) >= DATE_SUB(
+        v.data_criacao >= CURDATE()
+        AND v.data_criacao < DATE_ADD(
           CURDATE(),
-          INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY
+          INTERVAL 1 DAY
         )
+      `;
+    }
+
+    // =====================================================
+    // SEMANA ATUAL
+    //
+    // Segunda-feira às 07:00
+    // até a próxima segunda-feira às 07:00
+    //
+    // IMPORTANTE:
+    // Se for segunda antes das 07:00, ainda estamos
+    // considerando a semana iniciada na segunda anterior.
+    // =====================================================
+    else if (periodo === "semana") {
+      filtroData = `
+        v.data_criacao >=
+          DATE_SUB(
+            DATE_ADD(
+              DATE_SUB(
+                CURDATE(),
+                INTERVAL WEEKDAY(CURDATE()) DAY
+              ),
+              INTERVAL 7 HOUR
+            ),
+            INTERVAL
+              (
+                CASE
+                  WHEN WEEKDAY(CURDATE()) = 0
+                    AND CURTIME() < '07:00:00'
+                  THEN 7
+                  ELSE 0
+                END
+              ) DAY
+          )
 
         AND
 
-        COALESCE(v.data_venda, DATE(v.data_criacao)) < DATE_ADD(
-          DATE_SUB(
-            CURDATE(),
-            INTERVAL ((DAYOFWEEK(CURDATE()) + 1) % 7) DAY
-          ),
-          INTERVAL 7 DAY
-        )
+        v.data_criacao <
+          DATE_ADD(
+            DATE_SUB(
+              DATE_ADD(
+                DATE_SUB(
+                  CURDATE(),
+                  INTERVAL WEEKDAY(CURDATE()) DAY
+                ),
+                INTERVAL 7 HOUR
+              ),
+              INTERVAL
+                (
+                  CASE
+                    WHEN WEEKDAY(CURDATE()) = 0
+                      AND CURTIME() < '07:00:00'
+                    THEN 7
+                    ELSE 0
+                  END
+                ) DAY
+            ),
+            INTERVAL 7 DAY
+          )
       `;
     }
 
@@ -35,12 +86,15 @@ async function desempenhoFuncionarios(req, res) {
     // =====================================================
     else if (periodo === "mes") {
       filtroData = `
-        COALESCE(v.data_venda, DATE(v.data_criacao)) >=
-          DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        v.data_criacao >=
+          DATE_FORMAT(
+            CURDATE(),
+            '%Y-%m-01'
+          )
 
         AND
 
-        COALESCE(v.data_venda, DATE(v.data_criacao)) <
+        v.data_criacao <
           DATE_ADD(
             LAST_DAY(CURDATE()),
             INTERVAL 1 DAY
@@ -53,13 +107,15 @@ async function desempenhoFuncionarios(req, res) {
     // =====================================================
     else if (periodo === "6meses") {
       filtroData = `
-        COALESCE(v.data_venda, DATE(v.data_criacao)) >=
-          DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+        v.data_criacao >=
+          DATE_SUB(
+            NOW(),
+            INTERVAL 6 MONTH
+          )
 
         AND
 
-        COALESCE(v.data_venda, DATE(v.data_criacao)) <
-          DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+        v.data_criacao <= NOW()
       `;
     }
 
@@ -68,9 +124,19 @@ async function desempenhoFuncionarios(req, res) {
     // =====================================================
     else if (periodo === "ano") {
       filtroData = `
-        YEAR(
-          COALESCE(v.data_venda, DATE(v.data_criacao))
-        ) = YEAR(CURDATE())
+        v.data_criacao >=
+          MAKEDATE(
+            YEAR(CURDATE()),
+            1
+          )
+
+        AND
+
+        v.data_criacao <
+          MAKEDATE(
+            YEAR(CURDATE()) + 1,
+            1
+          )
       `;
     }
 

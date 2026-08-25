@@ -69,20 +69,22 @@ function Performance() {
   }, [dados]);
 
   function obterNomePeriodo() {
-    if (periodo === "semana") return "Semana atual";
-    if (periodo === "mes") return "Mês atual";
-    if (periodo === "6meses") return "Últimos 6 meses";
-    if (periodo === "ano") return "Ano atual";
+  if (periodo === "dia") return "Hoje";
+  if (periodo === "semana") return "Semana atual";
+  if (periodo === "mes") return "Mês atual";
+  if (periodo === "6meses") return "Últimos 6 meses";
+  if (periodo === "ano") return "Ano atual";
 
-    return "Período";
-  }
+  return "Período";
+}
 
   const filtros = [
-    { value: "semana", label: "Semana" },
-    { value: "mes", label: "Mês" },
-    { value: "6meses", label: "6 meses" },
-    { value: "ano", label: "Ano" },
-  ];
+  { value: "dia", label: "Hoje" },
+  { value: "semana", label: "Semana" },
+  { value: "mes", label: "Mês" },
+  { value: "6meses", label: "6 meses" },
+  { value: "ano", label: "Ano" },
+];
 
   return (
     <div style={styles.page}>

@@ -1,10 +1,14 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
 import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
-import Products from "../pages/Products";
 import NewAISale from "../pages/NewAISale";
 import SalesHistory from "../pages/SalesHistory";
 import Ranking from "../pages/Ranking";
@@ -33,9 +37,24 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<Register />} />
+        {/* PÁGINAS PÚBLICAS */}
+
+        <Route
+          path="/"
+          element={<Home />}
+        />
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          path="/cadastro"
+          element={<Register />}
+        />
+
+        {/* DASHBOARD */}
 
         <Route
           path="/dashboard"
@@ -48,16 +67,7 @@ function AppRoutes() {
           }
         />
 
-        <Route
-          path="/produtos"
-          element={
-            <RotaPrivada>
-              <DashboardLayout>
-                <Products />
-              </DashboardLayout>
-            </RotaPrivada>
-          }
-        />
+        {/* REGISTRAR VENDA */}
 
         <Route
           path="/venda-ia"
@@ -70,6 +80,8 @@ function AppRoutes() {
           }
         />
 
+        {/* HISTÓRICO */}
+
         <Route
           path="/historico"
           element={
@@ -80,6 +92,8 @@ function AppRoutes() {
             </RotaPrivada>
           }
         />
+
+        {/* RANKING */}
 
         <Route
           path="/ranking"
@@ -92,6 +106,8 @@ function AppRoutes() {
           }
         />
 
+        {/* DESEMPENHO */}
+
         <Route
           path="/desempenho"
           element={
@@ -102,6 +118,8 @@ function AppRoutes() {
             </RotaPrivada>
           }
         />
+
+        {/* USUÁRIOS */}
 
         <Route
           path="/usuarios"
@@ -114,6 +132,8 @@ function AppRoutes() {
           }
         />
 
+        {/* PERFIL */}
+
         <Route
           path="/perfil"
           element={
@@ -122,6 +142,18 @@ function AppRoutes() {
                 <Profile />
               </DashboardLayout>
             </RotaPrivada>
+          }
+        />
+
+        {/* ROTA NÃO ENCONTRADA */}
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/"
+              replace
+            />
           }
         />
       </Routes>

@@ -27,11 +27,6 @@ function DashboardLayout({ children }) {
       icon: "◉",
     },
     {
-      path: "/produtos",
-      label: "Produtos",
-      icon: "▣",
-    },
-    {
       path: "/venda-ia",
       label: "Registrar Venda",
       icon: "✦",
