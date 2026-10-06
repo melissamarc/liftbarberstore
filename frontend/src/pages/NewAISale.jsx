@@ -3,11 +3,19 @@ import api from "../services/api";
 
 import "../pages/StyleNewAISale.css";
 
+// Data de hoje no fuso LOCAL do navegador, formato YYYY-MM-DD.
+// (toISOString() usa UTC e, no Brasil, vira "amanhã" depois das 21h)
+function dataHojeLocal() {
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
 function NewAISale() {
   const [clienteNome, setClienteNome] = useState("");
-  const [dataVenda, setDataVenda] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [dataVenda, setDataVenda] = useState(dataHojeLocal);
 
   const [mensagem, setMensagem] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -34,22 +42,11 @@ function NewAISale() {
     }
 
     if (linhaTotal) {
-      return Number(
-        valores[0]
-          .replace(/\./g, "")
-          .replace(",", ".")
-      );
+      return Number(valores[0].replace(/\./g, "").replace(",", "."));
     }
 
     return valores.reduce((acc, valor) => {
-      return (
-        acc +
-        Number(
-          valor
-            .replace(/\./g, "")
-            .replace(",", ".")
-        )
-      );
+      return acc + Number(valor.replace(/\./g, "").replace(",", "."));
     }, 0);
   }, [mensagem]);
 
@@ -66,51 +63,44 @@ function NewAISale() {
       setMensagemSucesso("");
 
       if (!mensagem.trim()) {
-        setErro(
-          "Cole a mensagem do pedido antes de salvar."
-        );
+        setErro("Cole a mensagem do pedido antes de salvar.");
         return;
       }
 
-      if (
-        !valorDetectado ||
-        valorDetectado <= 0
-      ) {
-        setErro(
-          "Não encontrei um valor válido na mensagem."
-        );
+      if (!dataVenda) {
+        setErro("Informe a data da venda.");
+        return;
+      }
+
+      if (!valorDetectado || valorDetectado <= 0) {
+        setErro("Não encontrei um valor válido na mensagem.");
         return;
       }
 
       setSalvando(true);
 
-      await api.post("/sales/ia", {
-        cliente_nome:
-          clienteNome.trim() || null,
-
-        data_venda: dataVenda,
-
+      const resposta = await api.post("/sales/ia", {
+        cliente_nome: clienteNome.trim() || null,
+        data_venda: dataVenda, // "YYYY-MM-DD"
         mensagem_original: mensagem,
       });
 
+      const dataSalva = resposta.data?.venda?.data_venda;
+
       setMensagemSucesso(
-        "Venda registrada com sucesso."
+        dataSalva
+          ? `Venda registrada com sucesso para o dia ${dataSalva
+              .split("-")
+              .reverse()
+              .join("/")}.`
+          : "Venda registrada com sucesso."
       );
 
       setClienteNome("");
-
-      setDataVenda(
-        new Date()
-          .toISOString()
-          .slice(0, 10)
-      );
-
+      setDataVenda(dataHojeLocal());
       setMensagem("");
     } catch (error) {
-      setErro(
-        error.response?.data?.message ||
-          "Erro ao salvar venda."
-      );
+      setErro(error.response?.data?.message || "Erro ao salvar venda.");
     } finally {
       setSalvando(false);
     }
@@ -118,21 +108,15 @@ function NewAISale() {
 
   return (
     <div className="ai-sale-page">
-
       <header className="ai-sale-header">
         <div>
-          <p className="ai-sale-eyebrow">
-            Pedido por texto
-          </p>
+          <p className="ai-sale-eyebrow">Pedido por texto</p>
 
-          <h1 className="ai-sale-title">
-            Registrar venda
-          </h1>
+          <h1 className="ai-sale-title">Registrar venda</h1>
 
           <p className="ai-sale-subtitle">
-            Cole a mensagem gerada pelo catálogo.
-            O sistema identifica o total e registra
-            a venda automaticamente.
+            Cole a mensagem gerada pelo catálogo. O sistema identifica o total
+            e registra a venda automaticamente.
           </p>
         </div>
 
@@ -142,134 +126,87 @@ function NewAISale() {
         </div>
       </header>
 
-      {erro && (
-        <div className="ai-sale-alert error">
-          {erro}
-        </div>
-      )}
+      {erro && <div className="ai-sale-alert error">{erro}</div>}
 
       {mensagemSucesso && (
-        <div className="ai-sale-alert success">
-          {mensagemSucesso}
-        </div>
+        <div className="ai-sale-alert success">{mensagemSucesso}</div>
       )}
 
       <section className="ai-sale-layout">
-
         <aside className="ai-sale-sidebar">
-
           <div className="ai-sale-info">
-            <div className="ai-sale-info-icon">
-              ✦
-            </div>
+            <div className="ai-sale-info-icon">✦</div>
 
             <div>
-              <p className="ai-sale-section-eyebrow">
-                Venda rápida
-              </p>
+              <p className="ai-sale-section-eyebrow">Venda rápida</p>
 
-              <h2>
-                Pedido do catálogo
-              </h2>
+              <h2>Pedido do catálogo</h2>
 
               <p>
-                Não é necessário selecionar produtos.
-                Basta colar o pedido e confirmar o valor
-                identificado.
+                Não é necessário selecionar produtos. Basta colar o pedido e
+                confirmar o valor identificado.
               </p>
             </div>
           </div>
 
           <div className="ai-sale-summary">
-
             <div className="ai-sale-field">
-              <label>
-                Cliente
-              </label>
+              <label>Cliente</label>
 
               <input
                 type="text"
                 placeholder="Nome do cliente"
                 value={clienteNome}
-                onChange={(e) =>
-                  setClienteNome(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => setClienteNome(e.target.value)}
               />
             </div>
 
             <div className="ai-sale-field">
-              <label>
-                Data da venda
-              </label>
+              <label>Data da venda</label>
 
               <input
                 type="date"
                 value={dataVenda}
-                onChange={(e) =>
-                  setDataVenda(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => setDataVenda(e.target.value)}
               />
             </div>
 
             <div className="ai-sale-total">
-              <span>
-                Total detectado
-              </span>
+              <span>Total detectado</span>
 
-              <strong>
-                {formatarMoeda(
-                  valorDetectado
-                )}
-              </strong>
+              <strong>{formatarMoeda(valorDetectado)}</strong>
 
               <p>
-                Esse valor entra no dashboard,
-                ranking e desempenho da equipe.
+                Esse valor entra no dashboard, ranking e desempenho da equipe.
               </p>
             </div>
 
             <button
               type="button"
               onClick={confirmarVenda}
-              disabled={
-                salvando ||
-                !mensagem.trim()
-              }
+              disabled={salvando || !mensagem.trim()}
               className="ai-sale-confirm"
             >
-              {salvando
-                ? "Salvando..."
-                : "Registrar venda"}
+              {salvando ? "Salvando..." : "Registrar venda"}
             </button>
           </div>
         </aside>
 
         <main className="ai-sale-content">
-
           <div className="ai-sale-content-header">
             <div>
-              <p className="ai-sale-section-eyebrow">
-                Mensagem
-              </p>
+              <p className="ai-sale-section-eyebrow">Mensagem</p>
 
-              <h2>
-                Cole o pedido
-              </h2>
+              <h2>Cole o pedido</h2>
 
               <p>
-                Copie a mensagem gerada pelo carrinho
-                do catálogo e cole abaixo.
+                Copie a mensagem gerada pelo carrinho do catálogo e cole
+                abaixo.
               </p>
             </div>
 
             {mensagem.trim() && (
-              <span className="ai-sale-detected">
-                Total identificado
-              </span>
+              <span className="ai-sale-detected">Total identificado</span>
             )}
           </div>
 
@@ -284,31 +221,18 @@ Pedido de João
 
 Total: R$ 65,00`}
             value={mensagem}
-            onChange={(e) =>
-              setMensagem(
-                e.target.value
-              )
-            }
+            onChange={(e) => setMensagem(e.target.value)}
           />
 
           <div className="ai-sale-preview">
-
             <div className="ai-sale-preview-header">
-              <p>
-                Prévia do pedido
-              </p>
+              <p>Prévia do pedido</p>
 
-              {mensagem.trim() && (
-                <span>
-                  {mensagem.length} caracteres
-                </span>
-              )}
+              {mensagem.trim() && <span>{mensagem.length} caracteres</span>}
             </div>
 
             {mensagem.trim() ? (
-              <pre>
-                {mensagem}
-              </pre>
+              <pre>{mensagem}</pre>
             ) : (
               <p className="ai-sale-preview-empty">
                 Nenhuma mensagem colada ainda.
