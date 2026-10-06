@@ -1,15 +1,15 @@
 // utils/semana.js
 //
 // REGRA DA SEMANA
-// - A semana de vendas vai de SEGUNDA 07:00 até SÁBADO 22:00 (fuso de São Paulo).
-// - Passou de sábado 22:00, o site entra na semana seguinte.
-// - A venda pertence à semana da sua DATA DA VENDA (data_venda), nunca à data do registro.
-// - Domingo não faz parte da semana que fecha: uma venda datada de domingo
-//   entra na semana seguinte.
+// - A semana vai de SEGUNDA 07:00 até a PRÓXIMA SEGUNDA 07:00 (fuso de São Paulo).
+// - Toda segunda às 07:00 a semana reseta e começa uma nova.
+// - Segunda antes das 07:00 ainda pertence à semana que está terminando.
+// - A venda pertence à semana da sua DATA DA VENDA (data_venda), nunca à data
+//   do registro. Como data_venda é só uma data (sem hora), uma venda datada de
+//   segunda conta na semana que começa naquela segunda.
 
 const FUSO = "America/Sao_Paulo";
-const FIM_DIA_SEMANA = 6; // sábado
-const FIM_HORA = 22; // 22:00
+const RESET_HORA = 7; // segunda 07:00
 
 // ------------------------------------------------------
 // Data/hora atual no fuso de São Paulo
@@ -64,23 +64,26 @@ function diaDaSemana(dataStr) {
 
 // ------------------------------------------------------
 // Segunda-feira da semana a que uma DATA pertence
-// (domingo cai na semana seguinte)
+// (semana = segunda a domingo)
 // ------------------------------------------------------
 function segundaDaSemanaDaData(dataStr) {
   const dow = diaDaSemana(dataStr);
-  if (dow === 0) return somarDias(dataStr, 1);
-  return somarDias(dataStr, -(dow - 1));
+  const recuo = dow === 0 ? 6 : dow - 1;
+  return somarDias(dataStr, -recuo);
 }
 
 // ------------------------------------------------------
 // Segunda-feira da semana ATIVA agora
-// Depois de sábado 22:00 já é a semana seguinte.
+// Segunda antes das 07:00 ainda é a semana anterior.
 // ------------------------------------------------------
 function segundaDaSemanaAtiva(agora = agoraBrasil()) {
-  if (agora.diaSemana === FIM_DIA_SEMANA && agora.hora >= FIM_HORA) {
-    return somarDias(agora.data, 2); // próxima segunda
+  const segunda = segundaDaSemanaDaData(agora.data);
+
+  if (agora.diaSemana === 1 && agora.hora < RESET_HORA) {
+    return somarDias(segunda, -7);
   }
-  return segundaDaSemanaDaData(agora.data);
+
+  return segunda;
 }
 
 // ------------------------------------------------------
@@ -88,26 +91,26 @@ function segundaDaSemanaAtiva(agora = agoraBrasil()) {
 // ------------------------------------------------------
 function montarSemana(segunda, agora = agoraBrasil()) {
   const ativa = segundaDaSemanaAtiva(agora);
+  const domingo = somarDias(segunda, 6);
 
   return {
     inicio: segunda, // segunda-feira (07:00)
-    fim: somarDias(segunda, 5), // sábado (22:00)
-    // Intervalo usado nas consultas SQL (inclui o domingo anterior,
-    // que pertence a esta semana):
-    consultaDe: somarDias(segunda, -1),
-    consultaAte: somarDias(segunda, 5),
+    fim: domingo, // domingo (a semana vira na segunda 07:00)
+    // Intervalo usado nas consultas SQL (por data_venda):
+    consultaDe: segunda,
+    consultaAte: domingo,
     atual: segunda === ativa,
     encerrada: segunda < ativa,
     futura: segunda > ativa,
     abertura: "Segunda 07:00",
-    fechamento: "Sábado 22:00",
+    fechamento: "Próxima segunda 07:00",
   };
 }
 
 // ------------------------------------------------------
 // Resolve o parâmetro vindo da URL:
 //   vazio ou "atual"      -> semana ativa
-//   "passada"            -> semana anterior à ativa
+//   "passada"             -> semana anterior à ativa
 //   "YYYY-MM-DD" (qualquer dia da semana) -> semana daquela data
 //   inválido              -> null
 // ------------------------------------------------------
@@ -119,7 +122,6 @@ function resolverSemana(parametro) {
     return montarSemana(segundaDaSemanaAtiva(agora), agora);
   }
 
-  // semana imediatamente anterior à semana ativa
   if (valor === "passada") {
     return montarSemana(
       somarDias(segundaDaSemanaAtiva(agora), -7),

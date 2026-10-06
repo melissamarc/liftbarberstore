@@ -4,9 +4,9 @@ const { resolverSemana } = require("../utils/semana");
 // =====================================================
 // RANKING DE VENDEDORES
 //
-// Semana: segunda 07:00 até sábado 22:00, contada pela
+// Semana: segunda 07:00 até a próxima segunda 07:00, contada pela
 // DATA DA VENDA (data_venda), e não pela data do registro.
-// Depois de sábado 22:00 o ranking passa para a semana nova.
+// Toda segunda às 07:00 o ranking reseta.
 //
 // Opcional: ?semana=passada  ou  ?semana=YYYY-MM-DD
 // =====================================================

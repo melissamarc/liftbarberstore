@@ -19,7 +19,7 @@ async function resumoDashboard(req, res) {
     const ultimoDiaMes = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
     const fimMes = `${ano}-${pad(mes)}-${pad(ultimoDiaMes)}`;
 
-    // Semana atual: segunda 07:00 até sábado 22:00 (pela data da venda)
+    // Semana atual: segunda 07:00 até a próxima segunda 07:00 (pela data da venda)
     const semana = resolverSemana("atual");
 
     // =====================================================

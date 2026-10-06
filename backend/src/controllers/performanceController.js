@@ -44,8 +44,8 @@ function calcularIntervalo(periodo, semanaParam) {
     };
   }
 
-  // Semana: segunda 07:00 até sábado 22:00.
-  // Depois de sábado 22:00 já é a semana seguinte.
+  // Semana: segunda 07:00 até a próxima segunda 07:00.
+  // Toda segunda às 07:00 a semana reseta.
   // "semana_passada" é a semana imediatamente anterior à ativa.
   if (periodo === "semana" || periodo === "semana_passada") {
     const semana = resolverSemana(
