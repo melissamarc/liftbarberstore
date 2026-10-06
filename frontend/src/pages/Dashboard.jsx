@@ -108,7 +108,7 @@ function Dashboard() {
           </strong>
 
           <span className="dashboard-summary-detail">
-            {resumo?.quantidade_vendas_semana || 0} vendas · sex–qui
+            {resumo?.quantidade_vendas_semana || 0} vendas · seg-dom
           </span>
         </div>
 
@@ -171,7 +171,7 @@ function Dashboard() {
                 </p>
 
                 <span className="dashboard-overview-text">
-                  Acumulado desde sexta-feira
+                 Inicia na segunda-feira.
                 </span>
               </div>
 
@@ -222,7 +222,7 @@ function Dashboard() {
               </h2>
 
               <p className="dashboard-section-description">
-                Vendas registradas de sexta-feira até quinta-feira.
+                Vendas registradas de segunda a domingo.
               </p>
             </div>
           </div>
