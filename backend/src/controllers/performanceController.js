@@ -1,158 +1,115 @@
 const pool = require("../config/db");
+const { agoraBrasil, resolverSemana } = require("../utils/semana");
+
+// =====================================================
+// HELPERS DE DATA (tudo em "YYYY-MM-DD", fuso de São Paulo)
+// =====================================================
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+function subtrairMeses(dataStr, meses) {
+  const [a, m, d] = dataStr.split("-").map(Number);
+
+  const total = a * 12 + (m - 1) - meses;
+  const ano = Math.floor(total / 12);
+  const mes = total % 12;
+
+  // evita datas inexistentes (ex.: 31/08 menos 6 meses -> 28/02)
+  const ultimoDia = new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate();
+
+  return `${ano}-${pad(mes + 1)}-${pad(Math.min(d, ultimoDia))}`;
+}
+
+// =====================================================
+// INTERVALO DE CADA PERÍODO
+//
+// Sempre baseado em v.data_venda (data da venda),
+// nunca na data em que a venda foi registrada.
+//
+// Retorna:
+//  - inicio / fim:        o que é exibido na tela
+//  - consultaDe / consultaAte: o que entra no SQL
+// =====================================================
+function calcularIntervalo(periodo, semanaParam) {
+  const hoje = agoraBrasil().data;
+  const [ano, mes] = hoje.split("-").map(Number);
+
+  if (periodo === "dia") {
+    return {
+      inicio: hoje,
+      fim: hoje,
+      consultaDe: hoje,
+      consultaAte: hoje,
+    };
+  }
+
+  // Semana: segunda 07:00 até sábado 22:00.
+  // Depois de sábado 22:00 já é a semana seguinte.
+  // "semana_passada" é a semana imediatamente anterior à ativa.
+  if (periodo === "semana" || periodo === "semana_passada") {
+    const semana = resolverSemana(
+      periodo === "semana_passada" ? "passada" : semanaParam
+    );
+
+    if (!semana) return null;
+
+    return {
+      inicio: semana.inicio,
+      fim: semana.fim,
+      consultaDe: semana.consultaDe,
+      consultaAte: semana.consultaAte,
+    };
+  }
+
+  if (periodo === "mes") {
+    const ultimoDia = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+    const inicio = `${ano}-${pad(mes)}-01`;
+    const fim = `${ano}-${pad(mes)}-${pad(ultimoDia)}`;
+
+    return { inicio, fim, consultaDe: inicio, consultaAte: fim };
+  }
+
+  if (periodo === "6meses") {
+    const inicio = subtrairMeses(hoje, 6);
+
+    return {
+      inicio,
+      fim: hoje,
+      consultaDe: inicio,
+      consultaAte: hoje,
+    };
+  }
+
+  if (periodo === "ano") {
+    const inicio = `${ano}-01-01`;
+    const fim = `${ano}-12-31`;
+
+    return { inicio, fim, consultaDe: inicio, consultaAte: fim };
+  }
+
+  return null;
+}
 
 // =====================================================
 // DESEMPENHO DOS FUNCIONÁRIOS
 // =====================================================
 async function desempenhoFuncionarios(req, res) {
   try {
-    const { periodo = "semana" } = req.query;
+    const { periodo = "semana", semana = "" } = req.query;
 
-    let filtroData = "";
+    const intervalo = calcularIntervalo(periodo, semana);
 
-    // =====================================================
-    // HOJE
-    // =====================================================
-    if (periodo === "dia") {
-      filtroData = `
-        v.data_criacao >= CURDATE()
-        AND v.data_criacao < DATE_ADD(
-          CURDATE(),
-          INTERVAL 1 DAY
-        )
-      `;
-    }
-
-    // =====================================================
-    // SEMANA ATUAL
-    //
-    // Segunda-feira às 07:00
-    // até a próxima segunda-feira às 07:00
-    //
-    // IMPORTANTE:
-    // Se for segunda antes das 07:00, ainda estamos
-    // considerando a semana iniciada na segunda anterior.
-    // =====================================================
-    else if (periodo === "semana") {
-      filtroData = `
-        v.data_criacao >=
-          DATE_SUB(
-            DATE_ADD(
-              DATE_SUB(
-                CURDATE(),
-                INTERVAL WEEKDAY(CURDATE()) DAY
-              ),
-              INTERVAL 7 HOUR
-            ),
-            INTERVAL
-              (
-                CASE
-                  WHEN WEEKDAY(CURDATE()) = 0
-                    AND CURTIME() < '07:00:00'
-                  THEN 7
-                  ELSE 0
-                END
-              ) DAY
-          )
-
-        AND
-
-        v.data_criacao <
-          DATE_ADD(
-            DATE_SUB(
-              DATE_ADD(
-                DATE_SUB(
-                  CURDATE(),
-                  INTERVAL WEEKDAY(CURDATE()) DAY
-                ),
-                INTERVAL 7 HOUR
-              ),
-              INTERVAL
-                (
-                  CASE
-                    WHEN WEEKDAY(CURDATE()) = 0
-                      AND CURTIME() < '07:00:00'
-                    THEN 7
-                    ELSE 0
-                  END
-                ) DAY
-            ),
-            INTERVAL 7 DAY
-          )
-      `;
-    }
-
-    // =====================================================
-    // MÊS ATUAL
-    // =====================================================
-    else if (periodo === "mes") {
-      filtroData = `
-        v.data_criacao >=
-          DATE_FORMAT(
-            CURDATE(),
-            '%Y-%m-01'
-          )
-
-        AND
-
-        v.data_criacao <
-          DATE_ADD(
-            LAST_DAY(CURDATE()),
-            INTERVAL 1 DAY
-          )
-      `;
-    }
-
-    // =====================================================
-    // ÚLTIMOS 6 MESES
-    // =====================================================
-    else if (periodo === "6meses") {
-      filtroData = `
-        v.data_criacao >=
-          DATE_SUB(
-            NOW(),
-            INTERVAL 6 MONTH
-          )
-
-        AND
-
-        v.data_criacao <= NOW()
-      `;
-    }
-
-    // =====================================================
-    // ANO ATUAL
-    // =====================================================
-    else if (periodo === "ano") {
-      filtroData = `
-        v.data_criacao >=
-          MAKEDATE(
-            YEAR(CURDATE()),
-            1
-          )
-
-        AND
-
-        v.data_criacao <
-          MAKEDATE(
-            YEAR(CURDATE()) + 1,
-            1
-          )
-      `;
-    }
-
-    // =====================================================
-    // PERÍODO INVÁLIDO
-    // =====================================================
-    else {
+    if (!intervalo) {
       return res.status(400).json({
         message: "Período inválido.",
       });
     }
 
-    // =====================================================
-    // CONSULTA
-    // =====================================================
-    const [resultado] = await pool.query(`
+    // data_venda >= início  E  data_venda < dia seguinte ao fim
+    // (funciona tanto se a coluna for DATE quanto DATETIME)
+    const [resultado] = await pool.query(
+      `
       SELECT
         u.id AS usuario_id,
         u.nome AS usuario_nome,
@@ -170,7 +127,8 @@ async function desempenhoFuncionarios(req, res) {
 
       LEFT JOIN vendas v
         ON v.usuario_id = u.id
-        AND ${filtroData}
+        AND COALESCE(v.data_venda, DATE(v.data_criacao)) >= ?
+        AND COALESCE(v.data_venda, DATE(v.data_criacao)) < DATE_ADD(?, INTERVAL 1 DAY)
 
       WHERE u.ativo = TRUE
 
@@ -184,31 +142,31 @@ async function desempenhoFuncionarios(req, res) {
         total_vendido DESC,
         quantidade_vendas DESC,
         u.nome ASC
-    `);
-
-    // =====================================================
-    // FORMATAR RESPOSTA
-    // =====================================================
-    const desempenho = resultado.map(
-      (item, index) => ({
-        posicao: index + 1,
-
-        usuario_id: item.usuario_id,
-        usuario_nome: item.usuario_nome,
-        usuario_email: item.usuario_email,
-        foto_perfil: item.foto_perfil,
-
-        quantidade_vendas: Number(
-          item.quantidade_vendas
-        ),
-
-        total_vendido: Number(
-          item.total_vendido
-        ),
-      })
+      `,
+      [intervalo.consultaDe, intervalo.consultaAte]
     );
 
-    return res.status(200).json(desempenho);
+    const desempenho = resultado.map((item, index) => ({
+      posicao: index + 1,
+
+      usuario_id: item.usuario_id,
+      usuario_nome: item.usuario_nome,
+      usuario_email: item.usuario_email,
+      foto_perfil: item.foto_perfil,
+
+      quantidade_vendas: Number(item.quantidade_vendas),
+
+      total_vendido: Number(item.total_vendido),
+    }));
+
+    return res.status(200).json({
+      periodo,
+      intervalo: {
+        inicio: intervalo.inicio,
+        fim: intervalo.fim,
+      },
+      dados: desempenho,
+    });
   } catch (error) {
     console.error(
       "Erro ao carregar desempenho dos funcionários:",
@@ -216,8 +174,7 @@ async function desempenhoFuncionarios(req, res) {
     );
 
     return res.status(500).json({
-      message:
-        "Erro ao carregar desempenho dos funcionários.",
+      message: "Erro ao carregar desempenho dos funcionários.",
     });
   }
 }

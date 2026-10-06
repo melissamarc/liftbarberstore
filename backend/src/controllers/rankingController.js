@@ -1,15 +1,27 @@
 const pool = require("../config/db");
+const { resolverSemana } = require("../utils/semana");
 
 // =====================================================
 // RANKING DE VENDEDORES
 //
-// Semana:
-// segunda-feira às 07:00
-// até a próxima segunda-feira às 06:59:59
+// Semana: segunda 07:00 até sábado 22:00, contada pela
+// DATA DA VENDA (data_venda), e não pela data do registro.
+// Depois de sábado 22:00 o ranking passa para a semana nova.
+//
+// Opcional: ?semana=passada  ou  ?semana=YYYY-MM-DD
 // =====================================================
 async function rankingVendedores(req, res) {
   try {
-    const [ranking] = await pool.query(`
+    const semana = resolverSemana(req.query.semana);
+
+    if (!semana) {
+      return res.status(400).json({
+        message: "Semana inválida. Use 'atual', 'passada' ou YYYY-MM-DD.",
+      });
+    }
+
+    const [ranking] = await pool.query(
+      `
       SELECT
         u.id AS usuario_id,
         u.nome AS usuario_nome,
@@ -27,55 +39,8 @@ async function rankingVendedores(req, res) {
 
       LEFT JOIN vendas v
         ON v.usuario_id = u.id
-
-        -- =============================================
-        -- INÍCIO DA SEMANA
-        -- Segunda-feira às 07:00
-        -- =============================================
-        AND v.data_criacao >=
-          DATE_SUB(
-            DATE_ADD(
-              DATE_SUB(
-                CURDATE(),
-                INTERVAL WEEKDAY(CURDATE()) DAY
-              ),
-              INTERVAL 7 HOUR
-            ),
-            INTERVAL (
-              CASE
-                WHEN WEEKDAY(CURDATE()) = 0
-                  AND CURTIME() < '07:00:00'
-                THEN 7
-                ELSE 0
-              END
-            ) DAY
-          )
-
-        -- =============================================
-        -- FIM DA SEMANA
-        -- Próxima segunda-feira às 07:00
-        -- =============================================
-        AND v.data_criacao <
-          DATE_ADD(
-            DATE_SUB(
-              DATE_ADD(
-                DATE_SUB(
-                  CURDATE(),
-                  INTERVAL WEEKDAY(CURDATE()) DAY
-                ),
-                INTERVAL 7 HOUR
-              ),
-              INTERVAL (
-                CASE
-                  WHEN WEEKDAY(CURDATE()) = 0
-                    AND CURTIME() < '07:00:00'
-                  THEN 7
-                  ELSE 0
-                END
-              ) DAY
-            ),
-            INTERVAL 7 DAY
-          )
+        AND COALESCE(v.data_venda, DATE(v.data_criacao)) >= ?
+        AND COALESCE(v.data_venda, DATE(v.data_criacao)) < DATE_ADD(?, INTERVAL 1 DAY)
 
       WHERE u.ativo = TRUE
 
@@ -89,38 +54,27 @@ async function rankingVendedores(req, res) {
         total_vendido DESC,
         quantidade_vendas DESC,
         u.nome ASC
-    `);
-
-    // =====================================================
-    // FORMATAR RANKING
-    // =====================================================
-    const rankingFormatado = ranking.map(
-      (item, index) => ({
-        posicao: index + 1,
-
-        usuario_id: item.usuario_id,
-        usuario_nome: item.usuario_nome,
-        usuario_email: item.usuario_email,
-        foto_perfil: item.foto_perfil,
-
-        total_vendido: Number(
-          item.total_vendido
-        ),
-
-        quantidade_vendas: Number(
-          item.quantidade_vendas
-        ),
-      })
+      `,
+      [semana.consultaDe, semana.consultaAte]
     );
 
-    return res
-      .status(200)
-      .json(rankingFormatado);
+    const rankingFormatado = ranking.map((item, index) => ({
+      posicao: index + 1,
+
+      usuario_id: item.usuario_id,
+      usuario_nome: item.usuario_nome,
+      usuario_email: item.usuario_email,
+      foto_perfil: item.foto_perfil,
+
+      total_vendido: Number(item.total_vendido),
+
+      quantidade_vendas: Number(item.quantidade_vendas),
+    }));
+
+    // Formato mantido (array) para não quebrar o front atual
+    return res.status(200).json(rankingFormatado);
   } catch (error) {
-    console.error(
-      "Erro ao carregar ranking:",
-      error.message
-    );
+    console.error("Erro ao carregar ranking:", error.message);
 
     return res.status(500).json({
       message: "Erro ao carregar ranking.",

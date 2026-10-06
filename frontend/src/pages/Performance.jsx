@@ -5,6 +5,7 @@ import { useResponsive } from "../hooks/useResponsive";
 function Performance() {
   const [periodo, setPeriodo] = useState("semana");
   const [dados, setDados] = useState([]);
+  const [intervalo, setIntervalo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -25,7 +26,8 @@ function Performance() {
         },
       });
 
-      setDados(response.data || []);
+      setDados(response.data?.dados || []);
+      setIntervalo(response.data?.intervalo || null);
     } catch (error) {
       console.error("Erro ao carregar desempenho:", error);
 
@@ -69,22 +71,37 @@ function Performance() {
   }, [dados]);
 
   function obterNomePeriodo() {
-  if (periodo === "dia") return "Hoje";
-  if (periodo === "semana") return "Semana atual";
-  if (periodo === "mes") return "Mês atual";
-  if (periodo === "6meses") return "Últimos 6 meses";
-  if (periodo === "ano") return "Ano atual";
+    const br = (d) => d.split("-").reverse().join("/");
 
-  return "Período";
-}
+    if (periodo === "dia") return "Hoje";
+
+    if (periodo === "semana") {
+      return intervalo
+        ? `Semana atual · ${br(intervalo.inicio)} a ${br(intervalo.fim)}`
+        : "Semana atual";
+    }
+
+    if (periodo === "semana_passada") {
+      return intervalo
+        ? `Semana passada · ${br(intervalo.inicio)} a ${br(intervalo.fim)}`
+        : "Semana passada";
+    }
+
+    if (periodo === "mes") return "Mês atual";
+    if (periodo === "6meses") return "Últimos 6 meses";
+    if (periodo === "ano") return "Ano atual";
+
+    return "Período";
+  }
 
   const filtros = [
-  { value: "dia", label: "Hoje" },
-  { value: "semana", label: "Semana" },
-  { value: "mes", label: "Mês" },
-  { value: "6meses", label: "6 meses" },
-  { value: "ano", label: "Ano" },
-];
+    { value: "dia", label: "Hoje" },
+    { value: "semana", label: "Semana atual" },
+    { value: "semana_passada", label: "Semana passada" },
+    { value: "mes", label: "Mês" },
+    { value: "6meses", label: "6 meses" },
+    { value: "ano", label: "Ano" },
+  ];
 
   return (
     <div style={styles.page}>
